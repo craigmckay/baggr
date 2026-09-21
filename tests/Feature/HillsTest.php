@@ -45,4 +45,12 @@ class HillsTest extends TestCase
         $this->assertEquals('desc', $component->get('sortDirection'));
         $this->assertEquals('Ben Nevis', $component->get('hills')->first()->name);
     }
+
+    public function test_each_row_links_through_to_its_hill_page(): void
+    {
+        $hill = Hill::factory()->create(['name' => 'Ben Nevis']);
+
+        Livewire::test('pages::hills')
+            ->assertSee(route('hills.show', $hill));
+    }
 }

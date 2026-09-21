@@ -12,7 +12,7 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="map" :href="route('hills.index')" :current="request()->routeIs('hills.index')" wire:navigate>
+                    <flux:sidebar.item icon="map" :href="route('hills.index')" :current="request()->routeIs('hills.*')" wire:navigate>
                         {{ __('Hills') }}
                     </flux:sidebar.item>
 

@@ -56,40 +56,33 @@ new #[Title('Hills')] class extends Component
         />
     </div>
 
-    <flux:table>
+    <flux:table class="w-full">
         <flux:table.columns>
-            <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')">
+            <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')" class="w-[55%] !whitespace-normal sm:w-auto">
                 {{ __('Name') }}
             </flux:table.column>
-            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')">
+            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[25%] sm:w-auto">
                 {{ __('Height (m)') }}
             </flux:table.column>
-            <flux:table.column sortable :sorted="$sortBy === 'region'" :direction="$sortDirection" wire:click="sort('region')">
+            <flux:table.column sortable :sorted="$sortBy === 'region'" :direction="$sortDirection" wire:click="sort('region')" class="hidden w-[20%] sm:table-cell sm:w-auto">
                 {{ __('Region') }}
             </flux:table.column>
-            <flux:table.column>{{ __('Links') }}</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
             @forelse ($this->hills as $hill)
-                <flux:table.row :key="$hill->id">
-                    <flux:table.cell class="font-medium">{{ $hill->name }}</flux:table.cell>
+                <flux:table.row
+                    :key="$hill->id"
+                    x-on:click="Livewire.navigate('{{ route('hills.show', $hill) }}')"
+                    class="cursor-pointer"
+                >
+                    <flux:table.cell class="!whitespace-normal font-medium">{{ $hill->name }}</flux:table.cell>
                     <flux:table.cell>{{ $hill->height_m }}</flux:table.cell>
-                    <flux:table.cell>{{ $hill->region }}</flux:table.cell>
-                    <flux:table.cell>
-                        <div class="flex items-center gap-4">
-                            <flux:link href="{{ $hill->walkhighlands_url }}" target="_blank" rel="noopener">
-                                {{ __('Walkhighlands') }}
-                            </flux:link>
-                            <flux:link href="{{ $hill->mwis_forecast_url }}" target="_blank" rel="noopener">
-                                {{ __('MWIS forecast') }}
-                            </flux:link>
-                        </div>
-                    </flux:table.cell>
+                    <flux:table.cell class="hidden sm:table-cell">{{ $hill->region }}</flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="4" class="text-center text-zinc-500">
+                    <flux:table.cell colspan="3" class="text-center text-zinc-500">
                         {{ __('No hills match your search.') }}
                     </flux:table.cell>
                 </flux:table.row>
