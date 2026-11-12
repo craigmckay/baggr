@@ -44,6 +44,28 @@ class HillFactory extends Factory
             'rhb_section' => fake()->randomElement(['01A', '02B', '10C']),
             'rhb_section_description' => 'Loch Tay to Perth',
             'photo_url' => null,
+            'photo_page_url' => null,
+            'photo_title' => null,
+            'photo_author' => null,
+            'photo_geograph_id' => null,
         ];
+    }
+
+    /**
+     * A hill with a Geograph photo and its attribution.
+     */
+    public function withPhoto(): static
+    {
+        return $this->state(function () {
+            $id = fake()->unique()->numberBetween(1_000_000, 8_999_999);
+
+            return [
+                'photo_url' => "https://s0.geograph.org.uk/geophotos/00/00/00/{$id}_abcdef12.jpg",
+                'photo_page_url' => "https://www.geograph.org.uk/photo/{$id}",
+                'photo_title' => 'Summit cairn',
+                'photo_author' => fake()->name(),
+                'photo_geograph_id' => $id,
+            ];
+        });
     }
 }

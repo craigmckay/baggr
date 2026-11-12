@@ -27,6 +27,10 @@ class Hill extends Model
         'rhb_section',
         'rhb_section_description',
         'photo_url',
+        'photo_page_url',
+        'photo_title',
+        'photo_author',
+        'photo_geograph_id',
     ];
 
     protected function casts(): array

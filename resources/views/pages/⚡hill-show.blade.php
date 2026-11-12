@@ -36,9 +36,24 @@ new class extends Component
     </div>
 
     @if ($hill->photo_url)
-        <a href="{{ $hill->walkhighlands_url }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-            <img src="{{ $hill->photo_url }}" alt="{{ $hill->name }}" class="w-full object-cover" />
-        </a>
+        <figure class="space-y-2">
+            @if ($hill->photo_page_url)
+                <a href="{{ $hill->photo_page_url }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+                    <img src="{{ $hill->photo_url }}" alt="{{ $hill->photo_title ?: $hill->name }}" class="w-full object-cover" />
+                </a>
+            @else
+                <div class="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+                    <img src="{{ $hill->photo_url }}" alt="{{ $hill->photo_title ?: $hill->name }}" class="w-full object-cover" />
+                </div>
+            @endif
+
+            @if ($hill->photo_author)
+                <figcaption class="text-xs text-zinc-500">
+                    &copy; {{ $hill->photo_author }},
+                    <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="license noopener" class="underline">CC BY-SA 2.0</a>
+                </figcaption>
+            @endif
+        </figure>
     @endif
 
     <div class="flex flex-wrap items-center gap-4">

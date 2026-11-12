@@ -47,14 +47,42 @@ class HillShowTest extends TestCase
 
     public function test_photo_is_only_shown_when_present(): void
     {
-        $withPhoto = Hill::factory()->create(['photo_url' => 'https://www.walkhighlands.co.uk/munros/ben-nevis-1.JPG']);
+        $withPhoto = Hill::factory()->withPhoto()->create();
         $withoutPhoto = Hill::factory()->create(['photo_url' => null]);
 
         $this->get(route('hills.show', $withPhoto))
-            ->assertSee('https://www.walkhighlands.co.uk/munros/ben-nevis-1.JPG', false);
+            ->assertSee($withPhoto->photo_url, false);
 
         $this->get(route('hills.show', $withoutPhoto))
-            ->assertOk();
+            ->assertOk()
+            ->assertDontSee('<figure', false)
+            ->assertDontSee('CC BY-SA 2.0');
+    }
+
+    public function test_photo_links_to_geograph_and_credits_the_photographer(): void
+    {
+        $hill = Hill::factory()->create([
+            'photo_url' => 'https://s1.geograph.org.uk/geophotos/08/35/75/8357549_3504571a.jpg',
+            'photo_page_url' => 'https://www.geograph.org.uk/photo/8357549',
+            'photo_title' => 'Ben Nevis summit',
+            'photo_author' => 'Anthony Foster',
+            'photo_geograph_id' => 8357549,
+        ]);
+
+        $this->get(route('hills.show', $hill))
+            ->assertSee('src="https://s1.geograph.org.uk/geophotos/08/35/75/8357549_3504571a.jpg"', false)
+            ->assertSee('href="https://www.geograph.org.uk/photo/8357549"', false)
+            ->assertSee('alt="Ben Nevis summit"', false)
+            ->assertSeeInOrder(['&copy; Anthony Foster,', 'https://creativecommons.org/licenses/by-sa/2.0/', 'CC BY-SA 2.0'], false);
+    }
+
+    public function test_photographer_name_is_escaped(): void
+    {
+        $hill = Hill::factory()->withPhoto()->create(['photo_author' => '<script>alert(1)</script>']);
+
+        $this->get(route('hills.show', $hill))
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false);
     }
 
     public function test_unknown_hill_slug_returns_404(): void
