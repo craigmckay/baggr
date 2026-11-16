@@ -16,6 +16,9 @@ export default defineConfig({
                 bunny('Instrument Sans', {
                     weights: [400, 500, 600],
                 }),
+                bunny('Nunito', {
+                    weights: [600, 900],
+                }),
             ],
         }),
         tailwindcss(),
