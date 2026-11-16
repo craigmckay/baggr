@@ -23,16 +23,25 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    --font-brand: 'Nunito', ui-rounded, system-ui, sans-serif;
+
+    /* baggr brand colours (docs/brand/README.md) */
+    --color-hill: #1f4d3a;
+    --color-heather: #c9b5dd;
+    --color-ink: #14211b;
+    --color-night: #13281f;
+
+    /* Hill green in light mode, heather in dark mode. */
+    --color-accent: var(--color-hill);
+    --color-accent-content: var(--color-hill);
     --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-heather);
+        --color-accent-content: var(--color-heather);
+        --color-accent-foreground: var(--color-ink);
     }
 }
 
