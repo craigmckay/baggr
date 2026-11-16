@@ -219,14 +219,13 @@ class FetchHillPhotos extends Command
     }
 
     /**
-     * Distance from the photo's position to the hill's summit, if both are known.
+     * Distance from the photo's position to the hill's summit, if the photo has a position.
      *
      * @param  array<string, mixed>  $item
      */
     private function distanceInMetres(array $item, Hill $hill): ?float
     {
-        if (! is_numeric($item['lat'] ?? null) || ! is_numeric($item['long'] ?? null)
-            || $hill->latitude === null || $hill->longitude === null) {
+        if (! is_numeric($item['lat'] ?? null) || ! is_numeric($item['long'] ?? null)) {
             return null;
         }
 
