@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>baggr</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;900&display=swap">
+<style>
+  body { margin: 0; background: #0B1712; font-family: Nunito, system-ui, sans-serif; }
+  .phone { width: 390px; min-height: 844px; margin: 0 auto; display: flex; flex-direction: column; background: #13281F; overflow: hidden; }
+  .content { flex-grow: 1; padding: 8px 32px 40px; display: flex; flex-direction: column; }
+  .lockup { display: flex; align-items: baseline; gap: 12px; }
+  .word { font-weight: 900; font-size: 60px; line-height: 1; letter-spacing: -0.03em; color: #fff; }
+  .tagline { margin: 16px 0 0; font-size: 22px; font-weight: 900; line-height: 1.4; color: #D3E1DA; }
+  .support { margin: 4px 0 0; font-size: 17px; font-weight: 600; line-height: 1.4; color: #A9C0B5; }
+  .signin { display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 16px; background: #fff; color: #13281F; font-size: 18px; font-weight: 900; text-decoration: none; }
+  .signin:hover { background: #E7EFEB; }
+  .invite { margin: 16px 0 0; font-size: 14px; line-height: 1.45; color: #A9C0B5; text-align: center; }
+</style>
+</head>
+<body>
+<main class="phone">
+  <svg viewBox="0 0 390 420" width="390" height="420" aria-hidden="true" style="display:block;flex-shrink:0">
+    <rect width="390" height="420" fill="#EDE3EE"/>
+    <circle cx="292" cy="196" r="36" fill="#F4CDB6"/>
+    <path d="M0 250 L48 205 L86 226 L140 168 L188 214 L236 186 L290 232 L340 196 L390 228 L390 420 L0 420 Z" fill="#A58DB8"/>
+    <path d="M0 300 L60 262 L104 284 L170 220 L214 262 L252 246 L318 296 L360 276 L390 290 L390 420 L0 420 Z" fill="#3F6F58"/>
+    <path d="M0 360 L52 334 L96 350 L150 300 L178 318 L232 262 L300 336 L346 322 L390 344 L390 420 L0 420 Z" fill="#13281F"/>
+  </svg>
+  <div class="content">
+    <div class="lockup">
+      <svg viewBox="2 14 60 42" width="64" height="45" aria-hidden="true" style="display:block"><path d="M2 56 L21 31 L27 38 L39 17 L62 56 Z" fill="#C9B5DD"/></svg>
+      <h1 class="word" style="margin:0">baggr</h1>
+    </div>
+    <p class="tagline">Get yourselves together.</p>
+    <p class="support">The hills are calling.</p>
+    <div style="flex-grow:1"></div>
+    <a class="signin" href="/login">Sign in</a>
+    <p class="invite">Invite only. Ask someone in your group for an invite.</p>
+  </div>
+</main>
+</body>
+</html>
