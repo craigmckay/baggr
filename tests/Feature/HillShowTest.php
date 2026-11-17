@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Area;
 use App\Models\Hill;
+use App\Models\HillClass;
+use App\Models\OsMap;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +46,46 @@ class HillShowTest extends TestCase
 
         $response->assertSee('https://www.walkhighlands.co.uk/munros/ben-nevis', false);
         $response->assertSee('https://www.mwis.org.uk/forecasts/scottish/west-highlands', false);
+    }
+
+    public function test_a_hill_without_links_or_photo_still_shows(): void
+    {
+        $hill = Hill::factory()->create([
+            'name' => 'Ben Cleuch',
+            'slug' => 'ben-cleuch',
+            'region' => null,
+            'country' => 'S',
+            'walkhighlands_url' => null,
+            'mwis_forecast_url' => null,
+            'smc_section' => null,
+            'rhb_section' => null,
+            'drop_m' => 595,
+        ]);
+
+        $this->get(route('hills.show', $hill))
+            ->assertOk()
+            ->assertSee('Ben Cleuch')
+            ->assertSee('Scotland')
+            ->assertSee('595.0m')
+            ->assertDontSee('Walkhighlands')
+            ->assertDontSee('MWIS')
+            ->assertDontSee('SMC section');
+    }
+
+    public function test_it_lists_the_hills_lists_areas_and_maps(): void
+    {
+        $hill = Hill::factory()->create();
+        $hill->classes()->attach(HillClass::create(['code' => 'G', 'name' => 'Graham', 'show_in_list' => true, 'sort_order' => 1]));
+        $hill->classes()->attach(HillClass::create(['code' => 'HHB', 'name' => 'Hidden', 'show_in_list' => false, 'sort_order' => 2]));
+        $hill->areas()->attach(Area::create(['code' => 'D002', 'short_name' => 'Ochils', 'name' => 'Ochil Hills', 'type' => 'region', 'country' => 'S']));
+        $hill->maps()->attach(OsMap::create(['type' => 'OS50', 'ref' => '058', 'name' => 'Perth']));
+
+        $this->get(route('hills.show', $hill))
+            ->assertSee('Graham')
+            ->assertDontSee('Hidden')
+            ->assertSee('Ochil Hills')
+            ->assertSee('OS Landranger')
+            ->assertSee('058');
     }
 
     public function test_photo_is_only_shown_when_present(): void

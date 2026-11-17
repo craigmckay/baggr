@@ -52,8 +52,8 @@ class HillSeeder extends Seeder
         // `hills:fetch-photos` and shouldn't be wiped out by re-running this
         // seeder.
         foreach (array_chunk($hills, 100) as $chunk) {
-            Hill::upsert($chunk, ['name'], [
-                'slug', 'dobih_number', 'height_m', 'region', 'walkhighlands_url', 'mwis_forecast_url',
+            Hill::upsert($chunk, ['dobih_number'], [
+                'name', 'slug', 'height_m', 'region', 'walkhighlands_url', 'mwis_forecast_url',
                 'grid_ref', 'latitude', 'longitude', 'smc_section', 'smc_section_description',
                 'rhb_section', 'rhb_section_description', 'updated_at',
             ]);
