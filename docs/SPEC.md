@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.8, 17 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.9, 17 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -115,13 +115,14 @@ Baggr gets its own identity, replacing the Laravel defaults.
 A list of all 282 Munros and a page for each hill. Each hill has a Walkhighlands link, its MWIS area, grid reference, lat/long, SMC section and RHB section.
 
 ### Hill lists
-Baggr covers more than the Munros. There are eight lists, each a DoBIH class (counts are from DoBIH v18.6):
+Baggr covers more than the Munros. There are nine lists, each a DoBIH class (counts are from DoBIH v18.6):
 - **Munros** (282) and **Munro Tops** (226)
 - **Corbetts** (222) and **Corbett Tops** (453)
 - **Grahams** (231) and **Graham Tops** (844)
 - **Donalds** (89) and **Donald Tops** (52)
+- **Marilyns** (2,007, across Britain and Ireland, including the Ochils and the Fife Marilyns West and East Lomond)
 
-The list of lists is confirmed: no Marilyns or Furths. The other DoBIH classes are stored with each hill but aren't shown as lists.
+The list of lists is confirmed: Marilyns are in (added in v0.9); Furths are not. The other DoBIH classes are stored with each hill but aren't shown as lists.
 
 - A "Tops" list holds only the subsidiary tops, never the main hills. In DoBIH no hill is in both a main class and its tops class, so Munros and Munro Tops are two separate lists of 282 and 226. A hill can still be on lists of different kinds; for example, a Munro can also be a Corbett Top or a Graham.
 - Totals are **counted from the data**, never hard-coded, because the lists get revised.
@@ -331,7 +332,7 @@ The same rules apply to a plan day and to a logged round (§5).
   - none
 - **Changing the direction reorders the hills** where Baggr can work it out. North → south sorts by latitude, west → east by longitude, and switching between clockwise and anticlockwise reverses the list. The order can still be adjusted by hand afterwards.
 - The plan page shows the hills numbered in order (1, 2, 3…), joined by a line on the map. If a GPX route is attached, the route line is drawn instead.
-- **Add hills to a day** by picking from the list or map, or from a GPX route (§9). The picker has a **list dropdown** (the eight lists in §3) that **defaults to Munros**. Switching it lets a day mix lists, such as a Munro and a neighbouring Corbett. The same picker is used when logging a round or trip (§5).
+- **Add hills to a day** by picking from the list or map, or from a GPX route (§9). The picker has a **list dropdown** (the nine lists in §3) that **defaults to Munros**. Switching it lets a day mix lists, such as a Munro and a neighbouring Corbett. The same picker is used when logging a round or trip (§5).
 - A multi-day trip is a list of days, each with its own ordered hills. Hills can be moved from one day to another.
 
 ### Lifecycle
@@ -476,10 +477,10 @@ Ruled out permanently.
 | Tagline | Brand tagline "Get yourselves together.", supporting line "The hills are calling." |
 | Who can see the app | Signed-in members only; the hill pages go behind sign-in and public registration is off |
 | Hill picker default | The list dropdown defaults to Munros when planning or logging |
-| Other hill lists | Eight lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). No Marilyns or Furths. |
+| Other hill lists | Nine lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops, Marilyns. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). Marilyns are in (decided after v0.8); no Furths. |
 | Who can create a group | Any signed-in member, who becomes its admin |
 | Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one |
-| Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, so the Fife Marilyns (West and East Lomond) work without a Marilyns list. |
+| Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
 | Email | Mailgun, for password resets and any later email. Needs Mailgun's DNS records added to baggr.co.uk. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
@@ -551,7 +552,7 @@ _For Code to check against the database and refine._
 | `hills` | (exists) + Geograph photo fields; `dobih_number` (exists) is the key. To add from DoBIH: country, feet, drop, col grid reference and height, 10-figure grid reference, feature, parent Marilyn/SMC hill, survey and revision notes, OS map sheets. `name` stops being unique, and `slug` gets a suffix where names clash. |
 | `hill_names` | `hill_id`, `name`, `sort` (alternate names, for search) |
 | `areas` / `area_hill` | `code`, `name`, `type` (region / murray / rhb / island / county / historic county / authority), `country`; `area_id`, `hill_id`, `is_alt`, `is_county_top`. `areas.mwis_area` (nullable) is the weather mapping. |
-| `hill_classes` / `class_hill` | `code`, `name`, `show_in_list`; `hill_id`, `hill_class_id`. The eight lists (§3) are the classes Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald and Donald Top. |
+| `hill_classes` / `class_hill` | `code`, `name`, `show_in_list`; `hill_id`, `hill_class_id`. The nine lists (§3) are the classes Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald, Donald Top and Marilyn. |
 | `os_maps` / `hill_map` | `type` (e.g. OS25), `ref` (e.g. 047W), `name`; `hill_id`, `os_map_id` |
 | `hill_lists` / `hill_list_hill` | `name`, `slug`; `hill_list_id`, `hill_id` |
 | `users` | (exists) + `colour`, `tracker_token` (personal OwnTracks URL). |

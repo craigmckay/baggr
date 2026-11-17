@@ -62,6 +62,19 @@ class HillsTest extends TestCase
             ->assertSee('Dumyat');
     }
 
+    public function test_marilyns_are_a_list(): void
+    {
+        $this->hillOn('M', ['name' => 'Ben Nevis']);
+        $this->hillOn('Ma', ['name' => 'West Lomond', 'region' => null, 'country' => 'S']);
+
+        Livewire::test('pages::hills')
+            ->assertSee('>Marilyns</option>', false)
+            ->set('list', 'Ma')
+            ->assertSee('West Lomond')
+            ->assertDontSee('Ben Nevis')
+            ->assertSee('Marilyns');
+    }
+
     public function test_hills_can_be_searched_by_name_or_region(): void
     {
         $this->hillOn('M', ['name' => 'Ben Nevis', 'region' => 'West Highlands']);
