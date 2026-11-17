@@ -86,4 +86,6 @@ new class extends Component
             <dd class="font-medium">{{ $hill->rhb_section }} &ndash; {{ $hill->rhb_section_description }}</dd>
         </div>
     </dl>
+
+    <x-dobih-credit class="text-zinc-500" />
 </div>

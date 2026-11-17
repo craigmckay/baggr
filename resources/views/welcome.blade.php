@@ -30,6 +30,7 @@
                 <p class="mt-4 text-center text-sm leading-snug text-[#A9C0B5]">
                     {{ __('Invite only. Ask someone in your group for an invite.') }}
                 </p>
+                <x-dobih-credit class="mt-3 text-center text-[#A9C0B5]/70" />
             </div>
         </main>
     </body>

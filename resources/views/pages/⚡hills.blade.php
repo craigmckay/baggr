@@ -89,4 +89,6 @@ new #[Title('Hills')] class extends Component
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <x-dobih-credit class="text-zinc-500" />
 </div>
