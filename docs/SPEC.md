@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.7, 16 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.8, 17 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -56,7 +56,6 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Groups, invitations, members and guests | §2 | **Must** |
 | Walks with days and hills in order | §8, §8.1 | **Must** |
 | Logging: quick hill, round, trip | §5 | **Must** |
-| Import of past ascents from Excel | §5 | **Must** |
 | Hill list: grouping by MWIS/SMC/RHB, MWIS badge, filters | §3 | **Must** |
 | MWIS fetch at 07:00, target day, rating | §4 | **Must** |
 | Region view ("where's best this weekend?") | §4 | **Must** |
@@ -66,7 +65,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Date polls on a draft plan | §7 | **Must** |
 | ntfy notifications for the group | §10 | **Must** |
 | GPX routes: upload, draw on a map, download | §9 | **Must** |
-| Other hill lists (Munro Tops, Corbetts, Grahams, Donalds) | §3 | **Must** |
+| Other hill lists (the tops, Corbetts, Grahams, Donalds) | §3 | **Must** |
 | Maps of completed hills and hills to do | §6.1, §6.2 | Should |
 | History timeline | §6.3 | Should |
 | Open-Meteo outlook beyond MWIS's range | §4 | Should |
@@ -81,6 +80,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Saving the tracked trail as a route | §11 | Could |
 | Compleation tracker (projected finish) | §6.1 | Could |
 | Hill photos from Geograph | §15 | Could |
+| Import of past ascents from Excel | §5 | Could |
 | Lift sharing | §12 | Could |
 | Calendar feed (.ics) | §12 | Could |
 | Safety/route card | §12 | Could |
@@ -100,8 +100,10 @@ Baggr gets its own identity, replacing the Laravel defaults.
 - A person can belong to **several groups**, for example "MGB" and a work hillwalking club.
 - Each group has a **name** and a **colour**. The colour is used on maps and timelines to show who a hill was done with.
 - Each person also has their **own colour**, used for hills done solo.
-- Joining a group is **by invitation only**: a group admin sends an invite link, and there's no open sign-up.
+- **Any signed-in member can create a group** and becomes its admin.
+- Joining a group is **by invitation only**: a group admin shares an invite link, and there's no open sign-up. One reusable link per group is enough. It **expires after 7 days**, and an admin can revoke it or make a new one.
 - Polls, plans and notifications all belong to **one group**.
+- **Ascents belong to the person.** Leaving a group doesn't touch someone's own history, and the group keeps its walks. Deleting an account removes that person's ascents, and the group's walks then show them as a "former member".
 - A walk can include **guests** who have no account. A guest is a name only, has no ascent history and **can't vote in polls**. Members add guests to a plan.
 - Roles within a group: **admin** (manages members) and **member**. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
 
@@ -113,21 +115,26 @@ Baggr gets its own identity, replacing the Laravel defaults.
 A list of all 282 Munros and a page for each hill. Each hill has a Walkhighlands link, its MWIS area, grid reference, lat/long, SMC section and RHB section.
 
 ### Hill lists
-Baggr covers more than the Munros. The lists to include are:
-- **Munros** (282)
-- **Munro Tops**
-- **Corbetts**
-- **Grahams**
-- **Donalds**
+Baggr covers more than the Munros. There are eight lists, each a DoBIH class (counts are from DoBIH v18.6):
+- **Munros** (282) and **Munro Tops** (226)
+- **Corbetts** (222) and **Corbett Tops** (453)
+- **Grahams** (231) and **Graham Tops** (844)
+- **Donalds** (89) and **Donald Tops** (52)
 
-The list of lists is confirmed: no Marilyns or Furths.
+The list of lists is confirmed: no Marilyns or Furths. The other DoBIH classes are stored with each hill but aren't shown as lists.
 
-- A hill can be on more than one list; for example, every Munro top is a Munro Top. Each hill records which lists it belongs to.
+- A "Tops" list holds only the subsidiary tops, never the main hills. In DoBIH no hill is in both a main class and its tops class, so Munros and Munro Tops are two separate lists of 282 and 226. A hill can still be on lists of different kinds; for example, a Munro can also be a Corbett Top or a Graham.
 - Totals are **counted from the data**, never hard-coded, because the lists get revised.
-- **Data source:** the Database of British and Irish Hills (DoBIH), the same family of data as the current Munro table. Check its licence and attribution terms before importing.
-- **Linking out:** Walkhighlands has pages for Corbetts, Grahams and Donalds too, so the same slug-matching approach applies.
-- **MWIS areas:** each new hill needs a primary MWIS area, as the Munros have. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map.
+- **Data source:** the Database of British and Irish Hills (DoBIH), the same family of data as the current Munro table. DoBIH is licensed under Creative Commons Attribution 4.0 International (checked 17 Nov 2026 at www.hill-bagging.co.uk/dobih/downloads), so it can be imported and reused with a credit.
+- **Credit:** every page that shows hill data carries a small credit: "Hill data: Database of British and Irish Hills v{version}, CC BY 4.0", linked to www.hill-bagging.co.uk/dobih. The version comes from the file imported. It goes on the hill pages and the landing page footer, and is added as soon as possible, because the Munro data already uses DoBIH numbers.
+- **Import the whole database.** All of DoBIH v18.6 is imported, not just the five lists: 21,576 hills (12,422 in Scotland, plus England, Wales, Ireland, the Isle of Man and the Channel Islands), their alternate names, all 66 classifications, all 1,218 areas and the OS map sheets. Scotland is the default view; the other countries are there too, and get an MWIS forecast where MWIS has an area for them. The importer matches hills by DoBIH number, so the 282 Munros already in Baggr keep their Walkhighlands link, MWIS area and photo.
+- **Areas.** DoBIH areas come in several types, shown by the first letter of the area code: DoBIH regions (D, e.g. "Ochil Hills"), Murray sections (M, the SMC sections), RHB sections (R), islands (I), current and historic counties (C, A) and unitary authorities (U). Every type is kept, so a walk can be placed in any of them. A hill can be in several areas. Hills with no tracked list, such as most of the Ochils, are still ordinary hills that can be picked, planned and logged. They just don't count towards a list total.
+- **Not copied from the Access file.** The `.mdb` can't be read on the live host. The importer runs locally and the result reaches the live site as a database dump, as the first deployment did.
+- **Linking out:** Walkhighlands has pages for Corbetts, Grahams and Donalds too, so the same slug-matching approach applies. The link is optional, because many hills have no page.
+- **MWIS areas:** a mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map. Hills outside those ten areas, for example the Cheviots, have no MWIS area.
 - **Choosing a list:** every hill view, stats page and history has a list selector. Munros is the default, and the choice is remembered.
+- **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills in the four Tops lists, which show none. They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
+- **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**.
 
 ### The three groupings
 Wherever hills are grouped, the user picks one of three, and the choice is remembered:
@@ -148,11 +155,11 @@ Wherever hills are grouped, the user picks one of three, and the choice is remem
 ## 4. Weather (MWIS)
 
 ### What MWIS provides
-- **Areas:** MWIS publishes a forecast for each Scottish area every day, in the **late afternoon (around 4pm)**. Each issue covers the **next 3 days**.
+- **Areas:** MWIS publishes a forecast for each of its ten areas every day: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). Forecasts come out in the **late afternoon (around 4pm)**. Each issue covers the **next 3 days**.
 - **Fields in each day's forecast:** headline, how windy, effect of wind, how wet, cloud on the hills, chance of cloud-free summits, sunshine and air clarity, how cold (at 900m), and the freezing level.
 
 ### Fetching
-- **A daily job at 07:00** fetches the latest forecast for all 4 Scottish areas and stores it in the database. That's 4 requests a day, and visitors never cause a request to MWIS. On the live site it runs through Laravel's scheduler, triggered by a cPanel cron job.
+- **A daily job at 07:00** fetches the latest forecast for all ten areas and stores it in the database. That's 10 requests a day, and visitors never cause a request to MWIS. On the live site it runs through Laravel's scheduler, triggered by a cPanel cron job.
 - The 07:00 run picks up the previous afternoon's issue, so on any given morning Baggr has **today plus the next 2 days**.
 - If a fetch fails or the page layout changes, Baggr keeps showing the last good forecast, marked with its issue date, and logs the error. It never shows a blank.
 
@@ -177,7 +184,7 @@ Plans and date polls often look further ahead than MWIS's 3 days. For those date
 - **When:** for plan days and date-poll options more than 2 days away and up to 14 days away.
 - **Where:** a point forecast for each hill on the plan, at the summit's coordinates and height. MWIS forecasts by area, but this one is per hill.
 - **What Baggr shows:** wind at summit height in mph, low-cloud cover as a percentage (a rough guide to whether the tops are clear), and precipitation.
-- **Rating:** the same Go / Marginal / Poor rules, using wind and treating "100 minus low-cloud %" as the cloud-free figure. It's always labelled **Outlook**, never just a rating, so it's clearly less certain.
+- **Rating:** the same Go / Marginal / Poor rules, using wind and treating "100 minus low-cloud %" as the cloud-free figure, for hills in Scotland only. It's always labelled **Outlook**, never just a rating, so it's clearly less certain. Hills outside Scotland show the outlook values with no rating.
 - **Hand-over:** once a date comes within MWIS's range, the MWIS forecast replaces the outlook.
 - **Fetching:** in the same 07:00 job, only for hills on active plans and polls. That's a handful of requests a day.
 - **Attribution:** Open-Meteo's data is CC BY 4.0, so every outlook display credits Open-Meteo.
@@ -194,7 +201,7 @@ Plans and date polls often look further ahead than MWIS's 3 days. For those date
 If a number can't be extracted, Baggr stores the text, gives no rating for that area and day, and shows "See MWIS".
 
 ### Rating
-A simple **Go / Marginal / Poor** rating per area and day, from the wind and cloud-free figures above:
+A simple **Go / Marginal / Poor** rating per area and day, from the wind and cloud-free figures above. **It applies to the five Scottish areas only**, because the thresholds are tuned for Scottish Munros. The five English and Welsh areas get no rating: Baggr shows their headline, wind and other extracted text, and links to the full forecast.
 
 | Rating | Rule |
 | --- | --- |
@@ -209,8 +216,8 @@ Rain never changes the rating. The thresholds are stored in config so they can b
 - **Open question:** MWIS forecasts are copyright. Before Baggr shows extracted values, ask MWIS whether that's OK. If they say no, Baggr falls back to showing only the area plus a link.
 
 ### Region view
-A page listing the 4 MWIS areas for the target day. Each area shows:
-- its rating, headline, wind, rain and cloud-free percentage
+A page listing the five Scottish MWIS areas for the target day, then the five English and Welsh ones. Each area shows:
+- its rating (Scottish areas only), headline, wind, rain and cloud-free percentage
 - **how many hills there I haven't done**, and the same count for the selected group
 
 Tapping an area opens **My hills to do** (§6) filtered to that area. This answers "where should we go this weekend?"
@@ -230,10 +237,7 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 - **With a group:** pick the group and tick who did which hills, the same grid as Closing a plan (§8).
 - **Solo:** the walk has no group.
 - Repeat ascents are allowed. Baggr counts **first ascent** towards the total and keeps every ascent in the history.
-- **Import past ascents** from the existing **Excel workbook** (.xlsx, read directly, with no CSV step). Years of history go back to 1987, so this is core, not optional. The workbook holds **Munros only**, so the import can run before the other hill lists are loaded.
-  - Each row is matched to a hill.
-  - Rows on the **same date** with the same companions become **one completed walk day**, with the hills in row order.
-  - Anything that can't be matched is listed for fixing by hand rather than skipped silently.
+- **Importing past ascents (Could).** Existing history, back to 1987, lives in an Excel workbook (`munrotab_v7.1.xlsx`, sheets `Climbed` and `Climber`). Importing it isn't part of version 1: past ascents can be logged by hand, and any import is handled as a one-off job if the need arises. Its `RunningNo` column matches the running numbers in the Munro spreadsheet already in Baggr.
 
 ---
 
@@ -251,7 +255,7 @@ The Laravel welcome page at `/` goes.
 - **Everything else needs signing in.** A visitor who follows a link to any page is sent to sign in, then taken to that page. **For now the hill list and hill pages stay public**, and move behind sign-in later.
 - **Signed in:** `/` is the home dashboard, a phone-first view of "what's next":
   - **Next plan** (or "No plans yet, start one"), with its date, hills and the weather or outlook rating.
-  - **This weekend:** the 4–5 MWIS areas for the target day with their ratings, each tapping through to the hills I still need there (the region view, §4).
+  - **This weekend:** the five Scottish MWIS areas for the target day with their ratings, each tapping through to the hills I still need there (the region view, §4).
   - **Progress:** X / total for my default list, with the latest ascent.
   - **Open polls** waiting for my vote.
 - The starter kit's separate `/dashboard` route redirects to `/`.
@@ -308,7 +312,7 @@ A plan belongs to one group and covers **one or more days**.
 | Field | Notes |
 | --- | --- |
 | Title | e.g. "Knoydart weekend" |
-| Days | Each day has a date, its hills **in order**, a direction, and its routes (see 8.1) |
+| Days | Each day has a date, its hills **in order**, a direction, and its routes (see 8.1). A plan has **at least one hill**: outings with no hills are arranged outside Baggr, on WhatsApp. Any hill in the database can be added, on a list or not, such as the Fife Marilyns West and East Lomond. |
 | People | Members and guests, each Going / Maybe / Not going for the whole trip, with optional per-day attendance |
 | Meeting point | Name plus a map pin or grid reference, and a time |
 | Accommodation | One or more stays, each with a name, link, check-in and check-out nights, and notes |
@@ -327,7 +331,7 @@ The same rules apply to a plan day and to a logged round (§5).
   - none
 - **Changing the direction reorders the hills** where Baggr can work it out. North → south sorts by latitude, west → east by longitude, and switching between clockwise and anticlockwise reverses the list. The order can still be adjusted by hand afterwards.
 - The plan page shows the hills numbered in order (1, 2, 3…), joined by a line on the map. If a GPX route is attached, the route line is drawn instead.
-- **Add hills to a day** by picking from the list or map, or from a GPX route (§9). The picker has a **list dropdown** (Munros, Munro Tops, Corbetts, Grahams, Donalds) that **defaults to Munros**. Switching it lets a day mix lists, such as a Munro and a neighbouring Corbett. The same picker is used when logging a round or trip (§5).
+- **Add hills to a day** by picking from the list or map, or from a GPX route (§9). The picker has a **list dropdown** (the eight lists in §3) that **defaults to Munros**. Switching it lets a day mix lists, such as a Munro and a neighbouring Corbett. The same picker is used when logging a round or trip (§5).
 - A multi-day trip is a list of days, each with its own ordered hills. Hills can be moved from one day to another.
 
 ### Lifecycle
@@ -358,7 +362,7 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
 ## 9. Routes (GPX)
 
 - Upload one or more GPX files to a plan day, or to a hill as a "route we used".
-- Each route is **drawn on a map** with an OS-style or topographic base layer.
+- Each route is **drawn on a map** with an Ordnance Survey base layer from the OS Maps API (§14). Every map in Baggr uses the same base layer.
 - Baggr calculates distance, total ascent and an estimated time using Naismith's rule, and shows an **elevation profile**.
 - **Download** the original GPX file.
 - Baggr checks which Munros the route passes within roughly 100m of, and offers to add them to that day's hills.
@@ -466,17 +470,30 @@ Ruled out permanently.
 | Which cloud-free figure | Highest in the area for the rating; full range shown |
 | Plan or date first | Plan first: a draft plan with hills or route, then a date poll on it |
 | How history is logged | Always as a walk (plan), created as Completed; a quick one-hill log is a one-day walk |
-| Import format | Excel workbook, read directly; Munros only |
+| Importing past ascents | Could, not version 1. Any import is handled as a one-off job if needed; past ascents can be logged by hand. |
 | Signed-out home page | Plain landing page: hill illustration, baggr wordmark, tagline, Sign in. No data shown. |
 | Hill mark | Direction A, "Peak", with nothing on the summit; its foot sits on the wordmark's baseline |
 | Tagline | Brand tagline "Get yourselves together.", supporting line "The hills are calling." |
 | Who can see the app | Signed-in members only; the hill pages go behind sign-in and public registration is off |
 | Hill picker default | The list dropdown defaults to Munros when planning or logging |
-| Other hill lists | In scope: Munros, Munro Tops, Corbetts, Grahams, Donalds. No Marilyns or Furths. |
+| Other hill lists | Eight lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). No Marilyns or Furths. |
+| Who can create a group | Any signed-in member, who becomes its admin |
+| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one |
+| Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, so the Fife Marilyns (West and East Lomond) work without a Marilyns list. |
+| Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
+| Email | Mailgun, for password resets and any later email. Needs Mailgun's DNS records added to baggr.co.uk. |
+| Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
+| Which hills get photos | Every hill except those in the four Tops lists, fetched locally in batches and shipped in the database dump |
+| Leaving a group or deleting an account | Ascents belong to the person; leaving a group changes nothing; deleting an account removes their ascents and the group's walks show a "former member" |
 | Brand colours | Hill green `#1F4D3A` and heather `#C9B5DD`, kept as design tokens |
 | ntfy topics | One topic per group; no per-person topics |
 | Live tracking positions | OwnTracks is the recommended source (§11) |
 | Geograph images | Hotlinked from Geograph's servers for now, with the CC BY-SA credit; downloading them is the fallback |
+| Rating coverage | Go / Marginal / Poor is derived for the five Scottish MWIS areas only; the five English and Welsh areas show their forecast values with no rating |
+| DoBIH licence | CC BY 4.0: free to import and reuse, with the credit in §3 on every page that shows hill data |
+| How much of DoBIH | All of it (all countries, names, classifications, areas, maps); Scotland is the default view |
+| MWIS area for new hills | A mapping table from DoBIH area to MWIS area; hills inherit it. The 282 Munros keep their curated MWIS area. |
+| Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
 | Live tracking | In scope (Should): share link with one group dot and messages; ntfy for followers |
@@ -487,11 +504,11 @@ Ruled out permanently.
 
 ## 15. Open questions
 
-1. **MWIS permission:** Craig is emailing MWIS about showing extracted values (§4). Needed before build step 4.
-2. **Import columns:** the history is in an Excel workbook. Share it, or its column headings, so the import can match its columns and hill names. Needed when we reach the import (step 1).
-3. **DoBIH licence:** check its licence and attribution terms before importing the other hill lists (step 9).
+1. **MWIS permission:** Craig is to email MWIS (draft written, not yet sent) about showing extracted values (§4), for all ten areas, five Scottish and five English and Welsh. Needed before build step 4.
+2. **OS Maps:** Craig creates an OS Data Hub account and asks OS whether Baggr (a private app for a few friends) qualifies for the Premium Plan, which the Leisure maps need. Also check the OpenData attribution wording, whether a key can be restricted to baggr.co.uk, and if not, serve tiles through Baggr. Needed before the first map (step 2 onwards).
+3. **Mailgun setup:** create the account, then add the SPF and DKIM records Mailgun gives in the cPanel Zone Editor for baggr.co.uk and send a test email. Needed before password resets are relied on.
 
-_Resolved on 16 Nov 2026 and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours._
+_Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026)._
 
 ---
 
@@ -502,7 +519,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 **Musts**
 
 0. **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
-1. **Groups, walks and ascents** (§2, §5, §8.1): groups, walks with days and ordered hills, logging completed walks (quick, round, trip), and the Excel import.
+1. **Groups, walks and ascents** (§2, §5, §8.1): groups, walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the region view, the home dashboard.
@@ -531,9 +548,13 @@ _For Code to check against the database and refine._
 
 | Table | Key columns |
 | --- | --- |
-| `hills` | (exists) + Geograph photo fields; `dobih_number` (exists) used as the key for all lists |
+| `hills` | (exists) + Geograph photo fields; `dobih_number` (exists) is the key. To add from DoBIH: country, feet, drop, col grid reference and height, 10-figure grid reference, feature, parent Marilyn/SMC hill, survey and revision notes, OS map sheets. `name` stops being unique, and `slug` gets a suffix where names clash. |
+| `hill_names` | `hill_id`, `name`, `sort` (alternate names, for search) |
+| `areas` / `area_hill` | `code`, `name`, `type` (region / murray / rhb / island / county / historic county / authority), `country`; `area_id`, `hill_id`, `is_alt`, `is_county_top`. `areas.mwis_area` (nullable) is the weather mapping. |
+| `hill_classes` / `class_hill` | `code`, `name`, `show_in_list`; `hill_id`, `hill_class_id`. The eight lists (§3) are the classes Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald and Donald Top. |
+| `os_maps` / `hill_map` | `type` (e.g. OS25), `ref` (e.g. 047W), `name`; `hill_id`, `os_map_id` |
 | `hill_lists` / `hill_list_hill` | `name`, `slug`; `hill_list_id`, `hill_id` |
-| `users` | (exists) + `colour`, `tracker_token` (personal OwnTracks URL) |
+| `users` | (exists) + `colour`, `tracker_token` (personal OwnTracks URL). |
 | `groups` | `name`, `colour`, `ntfy_topic`, `poll_threshold` |
 | `group_user` | `group_id`, `user_id`, `role` (admin/member) |
 | `guests` | `group_id`, `name` |
