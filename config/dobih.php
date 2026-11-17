@@ -18,4 +18,55 @@ return [
 
     'licence_url' => 'https://creativecommons.org/licenses/by/4.0/',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Hill lists
+    |--------------------------------------------------------------------------
+    |
+    | The lists Baggr tracks, each a DoBIH class code. A "Tops" list holds only
+    | the subsidiary tops, never the main hills. The first one is the default.
+    |
+    */
+
+    'lists' => [
+        'M' => 'Munros',
+        'MT' => 'Munro Tops',
+        'C' => 'Corbetts',
+        'CT' => 'Corbett Tops',
+        'G' => 'Grahams',
+        'GT' => 'Graham Tops',
+        'D' => 'Donalds',
+        'DT' => 'Donald Tops',
+    ],
+
+    'countries' => [
+        'S' => 'Scotland',
+        'E' => 'England',
+        'W' => 'Wales',
+        'I' => 'Ireland',
+        'M' => 'Isle of Man',
+        'C' => 'Channel Islands',
+        'ES' => 'England and Scotland',
+    ],
+
+    /** What each type of DoBIH area is called, in the order they're shown. */
+    'area_types' => [
+        'region' => 'Region',
+        'murray_section' => 'Murray section',
+        'rhb_section' => 'RHB section',
+        'island' => 'Island',
+        'county' => 'County',
+        'authority' => 'Council area',
+        'historic_county' => 'Historic county',
+        'london_borough' => 'London borough',
+        'named_area' => 'Area',
+        'other' => 'Other',
+    ],
+
+    'map_types' => [
+        'OS25' => 'OS Explorer',
+        'OS50' => 'OS Landranger',
+        'OSi50' => 'OSi Discovery',
+    ],
+
 ];
