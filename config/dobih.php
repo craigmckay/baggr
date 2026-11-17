@@ -25,6 +25,8 @@ return [
     |
     | The lists Baggr tracks, each a DoBIH class code. A "Tops" list holds only
     | the subsidiary tops, never the main hills. The first one is the default.
+    | Marilyns (any hill with 150m of drop) are the one list that spans every
+    | country.
     |
     */
 
@@ -37,6 +39,7 @@ return [
         'GT' => 'Graham Tops',
         'D' => 'Donalds',
         'DT' => 'Donald Tops',
+        'Ma' => 'Marilyns',
     ],
 
     'countries' => [
