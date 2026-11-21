@@ -6,6 +6,7 @@ use App\Mail\GroupInvitation;
 use App\Models\Group;
 use App\Models\GroupInvite;
 use App\Models\User;
+use App\Models\Walk;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -90,6 +91,23 @@ new class extends Component
             ->get();
     }
 
+    /**
+     * The group's latest walks.
+     *
+     * @return Collection<int, Walk>
+     */
+    #[Computed]
+    public function walks(): Collection
+    {
+        return $this->group->walks()
+            ->with('days.hills')
+            ->withMin('days', 'date')
+            ->orderByDesc('days_min_date')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
+    }
+
     private function requireAdmin(): void
     {
         abort_unless($this->group->isAdmin(Auth::user()), 403);
@@ -97,7 +115,7 @@ new class extends Component
 
     private function refresh(): void
     {
-        unset($this->role, $this->isAdmin, $this->members, $this->visitors, $this->invites);
+        unset($this->role, $this->isAdmin, $this->members, $this->visitors, $this->invites, $this->walks);
         $this->group->refresh();
     }
 
@@ -282,6 +300,27 @@ new class extends Component
                     @endif
                 </div>
             @endforeach
+        </section>
+
+        <section class="space-y-3" data-test="group-walks">
+            <div class="flex items-center justify-between gap-3">
+                <flux:heading>{{ __('Walks') }}</flux:heading>
+
+                @if (in_array($this->role, [GroupRole::Admin, GroupRole::Member], true))
+                    <flux:button size="xs" icon="plus" :href="route('walks.log', ['group' => $group->id])" wire:navigate>{{ __('Log a walk') }}</flux:button>
+                @endif
+            </div>
+
+            @forelse ($this->walks as $walk)
+                @php $hills = $walk->days->flatMap->hills; @endphp
+
+                <a href="{{ route('walks.show', $walk) }}" wire:navigate class="flex items-baseline justify-between gap-3 rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-700/40" data-test="group-walk-row">
+                    <span class="min-w-0 truncate">{{ $walk->title ?: $hills->pluck('name')->take(2)->implode(', ') }}</span>
+                    <span class="shrink-0 text-sm text-zinc-500">{{ $walk->days->first()?->date?->format('j M Y') }}</span>
+                </a>
+            @empty
+                <flux:text class="text-sm">{{ __('No walks logged for this group yet.') }}</flux:text>
+            @endforelse
         </section>
 
         @if ($this->isAdmin)

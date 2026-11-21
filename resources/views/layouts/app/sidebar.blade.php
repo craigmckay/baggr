@@ -16,6 +16,9 @@
                         {{ __('Hills') }}
                     </flux:sidebar.item>
                     @auth
+                        <flux:sidebar.item icon="flag" :href="route('walks.index')" :current="request()->routeIs('walks.*')" wire:navigate>
+                            {{ __('Walks') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="user-group" :href="route('groups.index')" :current="request()->routeIs('groups.*')" wire:navigate>
                             {{ __('Groups') }}
                         </flux:sidebar.item>

@@ -27,6 +27,13 @@ new class extends Component
         ->sortBy(fn ($group, $type) => array_search($type, array_keys($areaTypes), true));
     $maps = $hill->maps()->orderBy('type')->orderBy('ref')->get()->groupBy('type');
     $place = $hill->region ?? (config('dobih.countries')[$hill->country] ?? null);
+
+    // The hill pages are public, so logging and ascents only appear for someone who can use them.
+    $viewer = auth()->user();
+    $canLog = $viewer !== null && $viewer->hasVerifiedEmail();
+    $ascents = $canLog
+        ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
+        : collect();
 @endphp
 
 <div class="mx-auto w-full max-w-2xl space-y-6">
@@ -79,6 +86,23 @@ new class extends Component
                     <img src="{{ asset('images/mwis-logo.png') }}" alt="{{ __('MWIS mountain weather forecast') }}" class="h-8" />
                 </a>
             @endif
+        </div>
+    @endif
+
+    @if ($canLog)
+        <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="my-ascents">
+            <flux:text>
+                @if ($ascents->isEmpty())
+                    {{ __('You haven\'t logged this hill yet.') }}
+                @else
+                    {{ trans_choice('You have climbed this once|You have climbed this :count times', $ascents->count()) }}:
+                    {{ $ascents->map(fn ($ascent) => $ascent->walkDay->date?->format('j M Y'))->implode(', ') }}
+                @endif
+            </flux:text>
+
+            <flux:button size="sm" variant="primary" :href="route('walks.log', ['hill' => $hill->slug])" wire:navigate class="shrink-0" data-test="log-this-hill">
+                {{ __('Log this hill') }}
+            </flux:button>
         </div>
     @endif
 
