@@ -29,6 +29,10 @@ Route::middleware('throttle:group-join')->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('groups', 'pages::groups')->name('groups.index');
     Route::livewire('groups/{group}', 'pages::group-show')->name('groups.show');
+
+    Route::livewire('walks', 'pages::walks')->name('walks.index');
+    Route::livewire('walks/log', 'pages::walk-log')->name('walks.log');
+    Route::livewire('walks/{walk}', 'pages::walk-show')->name('walks.show');
 });
 
 require __DIR__.'/settings.php';
