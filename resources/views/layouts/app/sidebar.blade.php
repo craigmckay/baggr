@@ -15,6 +15,11 @@
                     <flux:sidebar.item icon="map" :href="route('hills.index')" :current="request()->routeIs('hills.*')" wire:navigate>
                         {{ __('Hills') }}
                     </flux:sidebar.item>
+                    @auth
+                        <flux:sidebar.item icon="user-group" :href="route('groups.index')" :current="request()->routeIs('groups.*')" wire:navigate>
+                            {{ __('Groups') }}
+                        </flux:sidebar.item>
+                    @endauth
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
