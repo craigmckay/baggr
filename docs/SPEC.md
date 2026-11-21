@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.10, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.11, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -492,7 +492,7 @@ Ruled out permanently.
 | Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
-| Email | Mailgun, for password resets and any later email. Needs Mailgun's DNS records added to baggr.co.uk. |
+| Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
 | Which hills get photos | Every hill except those only on one of the four Tops lists, fetched locally in batches and shipped in the database dump |
 | Leaving a group or deleting an account | Ascents belong to the person; leaving a group changes nothing; deleting an account removes their ascents and the group's walks show a "former member" |
@@ -517,9 +517,7 @@ Ruled out permanently.
 
 1. **MWIS permission:** Craig is to email MWIS (draft written, not yet sent) about showing extracted values (§4), for all ten areas, five Scottish and five English and Welsh. Needed before build step 4.
 2. **OS Maps:** Craig creates an OS Data Hub account and asks OS whether Baggr (a private app for a few friends) qualifies for the Premium Plan, which the Leisure maps need. Also check the OpenData attribution wording, whether a key can be restricted to baggr.co.uk, and if not, serve tiles through Baggr. Needed before the first map (step 2 onwards).
-3. **Mailgun setup:** create the account, then add the SPF and DKIM records Mailgun gives in the cPanel Zone Editor for baggr.co.uk and send a test email. Needed before password resets are relied on.
-
-_Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026)._
+_Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026); email service, now Resend and tested (21 Nov 2026)._
 
 ---
 
@@ -529,7 +527,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 
 **Musts**
 
-0. **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
+0. **Done (release 3).** **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
 1. **Groups, walks and ascents** (§2, §5, §8.1): groups, walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters.
@@ -538,7 +536,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
 7. **Notifications** (§10).
 8. **GPX routes** (§9): upload, draw, download.
-9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills.
+9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills. **Mostly done:** the whole-DoBIH import and the list selector, including Marilyns, are live (releases 4 and 5). Still to do: the MWIS mapping for the new hills, and running the Geograph photo fetch for them.
 
 **Shoulds**
 
