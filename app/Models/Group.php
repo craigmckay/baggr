@@ -62,6 +62,22 @@ class Group extends Model
     }
 
     /**
+     * @return HasMany<Walk, $this>
+     */
+    public function walks(): HasMany
+    {
+        return $this->hasMany(Walk::class);
+    }
+
+    /**
+     * @return HasMany<Guest, $this>
+     */
+    public function guests(): HasMany
+    {
+        return $this->hasMany(Guest::class);
+    }
+
+    /**
      * @return HasMany<GroupInvite, $this>
      */
     public function invites(): HasMany

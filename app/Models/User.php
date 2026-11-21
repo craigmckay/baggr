@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -58,6 +59,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function groups(): BelongsToMany
     {
         return $this->belongsToMany(Group::class)->withPivot('role')->withTimestamps();
+    }
+
+    /**
+     * Every hill this person has climbed, repeats included.
+     *
+     * @return HasMany<Ascent, $this>
+     */
+    public function ascents(): HasMany
+    {
+        return $this->hasMany(Ascent::class);
     }
 
     /**
