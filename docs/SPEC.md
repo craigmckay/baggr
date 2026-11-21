@@ -134,7 +134,7 @@ The list of lists is confirmed: Marilyns are in (added in v0.9); Furths are not.
 - **Linking out:** Walkhighlands has pages for Corbetts, Grahams and Donalds too, so the same slug-matching approach applies. The link is optional, because many hills have no page.
 - **MWIS areas:** a mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map. Hills outside those ten areas, for example the Cheviots, have no MWIS area.
 - **Choosing a list:** every hill view, stats page and history has a list selector. Munros is the default, and the choice is remembered.
-- **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills in the four Tops lists, which show none. They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
+- **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills that are only on one of the four Tops lists, which show none (a hill on a Tops list that is also on a main list, such as a Corbett that is a Munro Top, still gets one). They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
 - **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**.
 
 ### The three groupings
@@ -484,7 +484,7 @@ Ruled out permanently.
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
 | Email | Mailgun, for password resets and any later email. Needs Mailgun's DNS records added to baggr.co.uk. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
-| Which hills get photos | Every hill except those in the four Tops lists, fetched locally in batches and shipped in the database dump |
+| Which hills get photos | Every hill except those only on one of the four Tops lists, fetched locally in batches and shipped in the database dump |
 | Leaving a group or deleting an account | Ascents belong to the person; leaving a group changes nothing; deleting an account removes their ascents and the group's walks show a "former member" |
 | Brand colours | Hill green `#1F4D3A` and heather `#C9B5DD`, kept as design tokens |
 | ntfy topics | One topic per group; no per-person topics |

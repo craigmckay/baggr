@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Hill;
+use App\Models\HillClass;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -148,6 +149,55 @@ class FetchHillPhotosTest extends TestCase
         Sleep::assertSleptTimes(1);
     }
 
+    public function test_it_skips_hills_that_are_only_on_a_tops_list(): void
+    {
+        $topsOnly = $this->hillOn('CT', ['name' => 'Corbett Top', 'grid_ref' => 'NN100100']);
+        $topAndMain = $this->hillOn('MT', ['name' => 'Corbett and Munro Top', 'grid_ref' => 'NN200200']);
+        $topAndMain->classes()->attach(HillClass::firstOrCreate(['code' => 'C'], ['name' => 'Corbett', 'show_in_list' => true, 'sort_order' => 1]));
+        $marilyn = $this->hillOn('Ma', ['name' => 'Dumyat', 'grid_ref' => 'NS830973']);
+
+        Http::fake(['api.geograph.org.uk/*' => Http::response($this->feed([]))]);
+
+        $this->artisan('hills:fetch-photos')->assertSuccessful();
+
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn (Request $request) => $request['location'] === 'NN100100');
+        Http::assertSent(fn (Request $request) => $request['location'] === 'NN200200');
+        Http::assertSent(fn (Request $request) => $request['location'] === 'NS830973');
+    }
+
+    public function test_it_skips_hills_with_no_position(): void
+    {
+        Hill::factory()->create(['grid_ref' => null]);
+        Hill::factory()->create(['grid_ref' => 'NN166712', 'latitude' => null, 'longitude' => null]);
+
+        Http::fake();
+
+        $this->artisan('hills:fetch-photos')->expectsOutputToContain('Nothing to fetch')->assertSuccessful();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_it_can_work_in_batches(): void
+    {
+        Hill::factory()->count(3)->create();
+
+        Http::fake(['api.geograph.org.uk/*' => Http::response($this->feed([]))]);
+
+        $this->artisan('hills:fetch-photos --limit=2')->assertSuccessful();
+
+        Http::assertSentCount(2);
+    }
+
+    public function test_it_rejects_a_bad_limit(): void
+    {
+        Http::fake();
+
+        $this->artisan('hills:fetch-photos --limit=lots')->assertFailed();
+
+        Http::assertNothingSent();
+    }
+
     public function test_it_fails_without_an_api_key(): void
     {
         config(['services.geograph.key' => null]);
@@ -159,6 +209,19 @@ class FetchHillPhotosTest extends TestCase
             ->assertFailed();
 
         Http::assertNothingSent();
+    }
+
+    /**
+     * A hill on the given DoBIH list.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function hillOn(string $code, array $attributes = []): Hill
+    {
+        $hill = Hill::factory()->create($attributes);
+        $hill->classes()->attach(HillClass::firstOrCreate(['code' => $code], ['name' => $code, 'show_in_list' => true, 'sort_order' => 1]));
+
+        return $hill;
     }
 
     /**
