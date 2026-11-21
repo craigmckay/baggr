@@ -103,10 +103,14 @@ Baggr gets its own identity, replacing the Laravel defaults.
 - Each person also has their **own colour**, used for hills done solo.
 - **Any signed-in member can create a group** and becomes its admin.
 - Joining a group is **by invitation only**: a group admin shares an invite link, and there's no open sign-up. One reusable link per group is enough. It **expires after 7 days**, and an admin can revoke it or make a new one.
+- **The link is shared by message**, usually on Signal or WhatsApp. So that a link preview can't join anyone, opening the link only shows the group's name and a **Join** button; nothing happens until someone presses it.
+- **A person who already has an account** signs in and presses Join.
+- **A person with no account** can create one from the link page. That is the only way to create an account, because public registration stays off. They give a name, an email and a password.
+- **Email must be verified.** A new account is sent a verification email (through Resend) and can't use Baggr until the link in it is opened. Accounts made by hand with `php artisan users:create` are already verified.
 - Polls, plans and notifications all belong to **one group**.
 - **Ascents belong to the person.** Leaving a group doesn't touch someone's own history, and the group keeps its walks. Deleting an account removes that person's ascents, and the group's walks then show them as a "former member".
 - A walk can include **guests** who have no account. A guest is a name only, has no ascent history and **can't vote in polls**. Members add guests to a plan.
-- Roles within a group: **admin** (manages members) and **member**. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
+- Roles within a group: **admin** (manages members) and **member**. An admin can remove or demote any member, **including another admin**. A group always keeps at least one admin, so the last admin can't be removed or demoted, and can't leave until someone else is made admin. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
 
 ---
 
@@ -489,7 +493,9 @@ Ruled out permanently.
 | Hill picker default | The list dropdown defaults to Munros when planning or logging |
 | Other hill lists | Nine lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops, Marilyns. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). Marilyns are in (decided after v0.8); no Furths. |
 | Who can create a group | Any signed-in member, who becomes its admin |
-| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one |
+| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one. Shared on Signal or WhatsApp, so opening it only shows a Join button. A person with no account creates one from the link page, which is the only way to register. |
+| Email verification | Required. A new account must verify its email (sent through Resend) before using Baggr; accounts made with `users:create` are already verified. |
+| Admins removing admins | Any admin can remove or demote another admin, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
 | Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
