@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.10, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.11, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -103,10 +103,14 @@ Baggr gets its own identity, replacing the Laravel defaults.
 - Each person also has their **own colour**, used for hills done solo.
 - **Any signed-in member can create a group** and becomes its admin.
 - Joining a group is **by invitation only**: a group admin shares an invite link, and there's no open sign-up. One reusable link per group is enough. It **expires after 7 days**, and an admin can revoke it or make a new one.
+- **The link is shared by message**, usually on Signal or WhatsApp. So that a link preview can't join anyone, opening the link only shows the group's name and a **Join** button; nothing happens until someone presses it.
+- **A person who already has an account** signs in and presses Join.
+- **A person with no account** can create one from the link page. That is the only way to create an account, because public registration stays off. They give a name, an email and a password.
+- **Email must be verified.** A new account is sent a verification email (through Resend) and can't use Baggr until the link in it is opened. Accounts made by hand with `php artisan users:create` are already verified.
 - Polls, plans and notifications all belong to **one group**.
 - **Ascents belong to the person.** Leaving a group doesn't touch someone's own history, and the group keeps its walks. Deleting an account removes that person's ascents, and the group's walks then show them as a "former member".
 - A walk can include **guests** who have no account. A guest is a name only, has no ascent history and **can't vote in polls**. Members add guests to a plan.
-- Roles within a group: **admin** (manages members) and **member**. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
+- Roles within a group: **admin** (manages members) and **member**. An admin can remove or demote any member, **including another admin**. A group always keeps at least one admin, so the last admin can't be removed or demoted, and can't leave until someone else is made admin. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
 
 ---
 
@@ -489,10 +493,12 @@ Ruled out permanently.
 | Hill picker default | The list dropdown defaults to Munros when planning or logging |
 | Other hill lists | Nine lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops, Marilyns. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). Marilyns are in (decided after v0.8); no Furths. |
 | Who can create a group | Any signed-in member, who becomes its admin |
-| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one |
+| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one. Shared on Signal or WhatsApp, so opening it only shows a Join button. A person with no account creates one from the link page, which is the only way to register. |
+| Email verification | Required. A new account must verify its email (sent through Resend) before using Baggr; accounts made with `users:create` are already verified. |
+| Admins removing admins | Any admin can remove or demote another admin, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
-| Email | Mailgun, for password resets and any later email. Needs Mailgun's DNS records added to baggr.co.uk. |
+| Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
 | Which hills get photos | Every hill except those only on one of the four Tops lists, fetched locally in batches and shipped in the database dump |
 | Leaving a group or deleting an account | Ascents belong to the person; leaving a group changes nothing; deleting an account removes their ascents and the group's walks show a "former member" |
@@ -517,9 +523,7 @@ Ruled out permanently.
 
 1. **MWIS permission:** Craig is to email MWIS (draft written, not yet sent) about showing extracted values (§4), for all ten areas, five Scottish and five English and Welsh. Needed before build step 4.
 2. **OS Maps:** Craig creates an OS Data Hub account and asks OS whether Baggr (a private app for a few friends) qualifies for the Premium Plan, which the Leisure maps need. Also check the OpenData attribution wording, whether a key can be restricted to baggr.co.uk, and if not, serve tiles through Baggr. Needed before the first map (step 2 onwards).
-3. **Mailgun setup:** create the account, then add the SPF and DKIM records Mailgun gives in the cPanel Zone Editor for baggr.co.uk and send a test email. Needed before password resets are relied on.
-
-_Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026)._
+_Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026); email service, now Resend and tested (21 Nov 2026)._
 
 ---
 
@@ -529,7 +533,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 
 **Musts**
 
-0. **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
+0. **Done (release 3).** **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
 1. **Groups, walks and ascents** (§2, §5, §8.1): groups, walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters.
@@ -538,7 +542,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
 7. **Notifications** (§10).
 8. **GPX routes** (§9): upload, draw, download.
-9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills.
+9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills. **Mostly done:** the whole-DoBIH import and the list selector, including Marilyns, are live (releases 4 and 5). Still to do: the MWIS mapping for the new hills, and running the Geograph photo fetch for them.
 
 **Shoulds**
 
