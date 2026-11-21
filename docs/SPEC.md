@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.11, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.12, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -102,15 +102,22 @@ Baggr gets its own identity, replacing the Laravel defaults.
 - Each group has a **name** and a **colour**. The colour is used on maps and timelines to show who a hill was done with.
 - Each person also has their **own colour**, used for hills done solo.
 - **Any signed-in member can create a group** and becomes its admin.
-- Joining a group is **by invitation only**: a group admin shares an invite link, and there's no open sign-up. One reusable link per group is enough. It **expires after 7 days**, and an admin can revoke it or make a new one.
-- **The link is shared by message**, usually on Signal or WhatsApp. So that a link preview can't join anyone, opening the link only shows the group's name and a **Join** button; nothing happens until someone presses it.
-- **A person who already has an account** signs in and presses Join.
-- **A person with no account** can create one from the link page. That is the only way to create an account, because public registration stays off. They give a name, an email and a password.
-- **Email must be verified.** A new account is sent a verification email (through Resend) and can't use Baggr until the link in it is opened. Accounts made by hand with `php artisan users:create` are already verified.
+- Joining a group is **by invitation only**, and there's no open sign-up. There are two ways in, and creating an account through one of them is the only way to register, because public registration stays off.
+- **Roles.** A person has one role in each group:
+  - **Admin:** manages members and the group's link, and can do everything a member can.
+  - **Member:** plans, logs and votes. This is the ordinary walker.
+  - **Follower:** for spouses and loved ones at home. A follower can **change nothing about the group**. They see all of the group's walks, and can comment on a walk's check-in page (§11).
+  - **Visitor:** someone who has just arrived through the group's shared link. A visitor sees only the group's name and "waiting for an admin to approve you", until an admin promotes them. **Visitor can't be chosen from the front end**: an admin picks Admin, Member or Follower, and Visitor is only what the link produces.
+- **Invite by email (way one).** An admin types an email address on the group page and picks the role, Admin, Member or Follower. The admin has vouched for this person, so they go straight in at that role.
+  - If the email belongs to an **existing account**, that person is invited and **accepts** from an email and from their home page before they're added.
+  - If it doesn't, Baggr sends an **invitation email** with a link made for that address alone. It works once, **expires after 7 days**, and an admin can cancel it. Opening it lets the person create an account (a name and a password), and the link in the email proves they own the address, so they don't need a second verification email.
+- **The group's reusable link (way two).** One link per group, **shared by message**, usually on Signal or WhatsApp. It **expires after 7 days**, and an admin can revoke it or make a new one. Opening it only shows the group's name and a **Join** button, so a link preview can't join anyone. A person with an account signs in and presses Join; a person without one creates an account from the page. Either way they arrive as a **Visitor**.
+  - **Guards, because a forwarded link is the main risk:** joining through the link is rate-limited, a group holds **at most 30 waiting Visitors**, and the link page shows nothing beyond the group's name. An admin sees each Visitor's name and email before promoting them.
+- **Email must be verified.** An account created any other way than an emailed invitation is sent a verification email (through Resend) and can't use Baggr until the link in it is opened. Accounts made by hand with `php artisan users:create` are already verified.
 - Polls, plans and notifications all belong to **one group**.
 - **Ascents belong to the person.** Leaving a group doesn't touch someone's own history, and the group keeps its walks. Deleting an account removes that person's ascents, and the group's walks then show them as a "former member".
 - A walk can include **guests** who have no account. A guest is a name only, has no ascent history and **can't vote in polls**. Members add guests to a plan.
-- Roles within a group: **admin** (manages members) and **member**. An admin can remove or demote any member, **including another admin**. A group always keeps at least one admin, so the last admin can't be removed or demoted, and can't leave until someone else is made admin. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
+- An admin can change anyone's role (to Admin, Member or Follower) or remove them, **including another admin**. A group always keeps at least one admin, so the last admin can't be removed or demoted, and can't leave until someone else is made admin. Whoever creates a plan is its **organiser**. **Any attendee** of a plan can edit it, confirm its date and close it, not just the organiser.
 
 ---
 
@@ -386,6 +393,7 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
   - automatically when a date poll opens (asking people to vote), when a poll reaches its threshold, and when a date is confirmed or a plan is postponed or cancelled
   - by hand: any attendee can tap **Send update**
 - Sending runs from the Laravel scheduler.
+- **Don't forget: follower comments (§11).** Follower comments first show on the walk page only. When this step is built, a comment from a Follower should also alert the walkers on that walk through ntfy, so a "How are you getting on?" doesn't wait for someone to open the page.
 
 ---
 
@@ -399,7 +407,8 @@ While a walk is happening, the people at home can follow it in two layers:
 Check-ins work without OwnTracks, and OwnTracks adds to check-ins rather than replacing them.
 
 ### What followers see
-- A **share link** for each walk day. It's unguessable and **anyone who has it can open it**. It needs no account, and a partner, parent or mountain rescue team can use it. It is read-only.
+- A **share link** for each walk day. It's unguessable and **anyone who has it can open it**. It needs no account, and a partner, parent or mountain rescue team can use it. **Through the link a person can only read**, and can't post anything.
+- **Followers with an account can comment.** A spouse or loved one can instead be a **Follower** in the group (§2). They sign in and see the group's walks, including the check-in page, with a box to write a comment such as "How are you getting on?". The comment carries their name and appears in the feed among the check-ins, marked as a comment. A Follower can change nothing else.
 - **It never expires.** The page stays as a record of the day. Any walker on that day can **turn the link off**, and **make a new one**, from the walk page.
 - **"Last check-in 12 minutes ago"** shown prominently, with the place and the time of day. Mobile signal in the hills is patchy, so a gap is normal and doesn't mean anything is wrong.
 - **A feed of check-ins**, newest first, such as "11:42 · On summit of Ben Cleuch · NN902006".
@@ -420,6 +429,7 @@ Check-ins work without OwnTracks, and OwnTracks adds to check-ins rather than re
 - **Free-text check-ins** can be sent too.
 - **Position:** each check-in asks the phone for its location and attaches it, with its accuracy. If the phone won't give one, the check-in is still sent, with no pin.
 - **No signal:** the page keeps the check-in on the phone, with the time it was made, and sends it when signal returns. The page has to stay open for that to work.
+- **Follower comments** show on the walk page for the walkers, newest first with the check-ins. At first they raise no alert; an ntfy alert to the walkers is noted against §10.
 - **Automatic entries:** "Walk started" and "Walk finished". When OwnTracks is sharing, "Reached [hill]" is added when a position comes within about 100m of a planned summit.
 - **Expected back time (optional):** if the walk isn't finished an hour after this time, followers get a "no finish yet" notice. It's information, not an alarm.
 
@@ -493,9 +503,10 @@ Ruled out permanently.
 | Hill picker default | The list dropdown defaults to Munros when planning or logging |
 | Other hill lists | Nine lists: Munros, Munro Tops, Corbetts, Corbett Tops, Grahams, Graham Tops, Donalds, Donald Tops, Marilyns. A "Tops" list holds only the tops (Munro Tops is 226 hills, not 508). Marilyns are in (decided after v0.8); no Furths. |
 | Who can create a group | Any signed-in member, who becomes its admin |
-| Invitation links | One reusable link per group, expiring after 7 days; an admin can revoke it or make a new one. Shared on Signal or WhatsApp, so opening it only shows a Join button. A person with no account creates one from the link page, which is the only way to register. |
-| Email verification | Required. A new account must verify its email (sent through Resend) before using Baggr; accounts made with `users:create` are already verified. |
-| Admins removing admins | Any admin can remove or demote another admin, but a group always keeps at least one admin |
+| Invitation links | Two ways into a group (§2): an admin **invites by email** (single-use link for that address, 7 days, role chosen by the admin: Admin, Member or Follower), or someone uses the group's **reusable link** (7 days, revocable), shared on Signal or WhatsApp, which makes them a **Visitor** who sees nothing until an admin promotes them. The link is rate-limited and a group holds at most 30 waiting Visitors. Opening a link only shows a Join button. A person with no account creates one from either link, which is the only way to register. |
+| Roles | **Admin, Member, Follower, Visitor.** Visitor can't be chosen from the front end. A Follower can change nothing, sees all of the group's walks and can comment on a walk's check-in page; the open share link stays read-only for everyone else. Follower comments show on the walk page first, with an ntfy alert added in step 7. |
+| Email verification | Required, except for an account made through an emailed invitation (the link proves the address) and accounts made with `users:create`, which are already verified. Verification emails go through Resend. |
+| Admins removing admins | Any admin can change another admin's role or remove them, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
 | Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
@@ -534,13 +545,13 @@ The Musts come first, then the Shoulds, then the Coulds.
 **Musts**
 
 0. **Done (release 3).** **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
-1. **Groups, walks and ascents** (§2, §5, §8.1): groups, walks with days and ordered hills, and logging completed walks (quick, round, trip).
+1. **Groups, walks and ascents** (§2, §5, §8.1): groups with the four roles, invitations by email and the reusable link (Visitors and approval), walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the region view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
-7. **Notifications** (§10).
+7. **Notifications** (§10). Includes the ntfy alert for Follower comments (§11).
 8. **GPX routes** (§9): upload, draw, download.
 9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills. **Mostly done:** the whole-DoBIH import and the list selector, including Marilyns, are live (releases 4 and 5). Still to do: the MWIS mapping for the new hills, and running the Geograph photo fetch for them.
 
@@ -548,7 +559,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 
 10. **Maps and the history timeline** (§6).
 11. **Open-Meteo outlook** (§4).
-12. **Check-ins for the people at home** (§11).
+12. **Check-ins for the people at home** (§11), including Follower comments on the walk page.
 13. **Should features from §12**: money link, hill suggestions, daylight, PWA.
 
 **Coulds**
@@ -570,8 +581,9 @@ _For Code to check against the database and refine._
 | `os_maps` / `hill_map` | `type` (e.g. OS25), `ref` (e.g. 047W), `name`; `hill_id`, `os_map_id` |
 | `hill_lists` / `hill_list_hill` | `name`, `slug`; `hill_list_id`, `hill_id` |
 | `users` | (exists) + `colour`, `tracker_token` (personal OwnTracks URL). |
-| `groups` | `name`, `colour`, `ntfy_topic`, `poll_threshold` |
-| `group_user` | `group_id`, `user_id`, `role` (admin/member) |
+| `groups` | `name`, `colour`, `ntfy_topic`, `poll_threshold`, `join_token` and `join_token_expires_at` (the reusable link; null when revoked) |
+| `group_user` | `group_id`, `user_id`, `role` (admin/member/follower/visitor) |
+| `group_invites` | `group_id`, `email`, `role` (admin/member/follower), `token`, `invited_by`, `expires_at`, `accepted_at` (single use; cancelled by deleting) |
 | `guests` | `group_id`, `name` |
 | `ascents` | `user_id`, `hill_id`, `walk_day_id` (required: every ascent belongs to a walk day), `notes`. Date and group come from the walk. |
 | `walks` | `group_id` (null = solo), `title`, `status` (draft/polling/planned/postponed/cancelled/completed), `organiser_id`, meeting point fields, `money_url` (nullable), `notes`. Logged history (quick hill, round, trip or import) is a walk created as `completed`. |
@@ -583,6 +595,6 @@ _For Code to check against the database and refine._
 | `routes` | `walk_day_id` or `hill_id`, `file_path`, `distance_m`, `ascent_m` |
 | `forecasts` | `source` (mwis/open-meteo), `mwis_area` or `hill_id`, `forecast_date`, `issued_at`, `headline`, `wind_text`, `wind_max_mph`, `rain_text`, `cloud_free_text`, `cloud_free_max_pct`, `freezing_level_text`, `rating` (nullable), `raw` |
 | `tracking_sessions` | `walk_day_id`, `share_token` (null once turned off), `followers_ntfy_topic`, `started_at`, `finished_at`, `expected_back_at` |
-| `check_ins` | `tracking_session_id`, `user_id` (null for automatic), `kind` (manual/auto), `body`, `lat`, `lon`, `accuracy`, `made_at` (when the walker sent it), `created_at` (when it arrived). Kept for good. |
+| `check_ins` | `tracking_session_id`, `user_id` (null for automatic), `kind` (manual/auto/comment; a comment is from a Follower and has no position), `body`, `lat`, `lon`, `accuracy`, `made_at` (when the walker sent it), `created_at` (when it arrived). Kept for good. |
 | `positions` | `tracking_session_id`, `user_id`, `lat`, `lon`, `alt`, `accuracy`, `recorded_at`. OwnTracks fixes only; deleted after 30 days. |
 | `notifications_log` | `walk_id`, `type`, `sent_at`, `body` |
