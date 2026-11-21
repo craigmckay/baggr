@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.9, 17 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.10, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -13,7 +13,7 @@ Baggr is a private web app for small groups of friends who climb Scotland's hill
 3. **When can we all go, and what's the plan?**
 4. **What did we actually do?**
 5. **How has my bagging gone over the years?**
-6. **Where are they now?** (live tracking for the people at home)
+6. **Are they all right?** (check-ins for the people at home)
 
 ### Principles
 
@@ -69,7 +69,8 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Maps of completed hills and hills to do | §6.1, §6.2 | Should |
 | History timeline | §6.3 | Should |
 | Open-Meteo outlook beyond MWIS's range | §4 | Should |
-| Live tracking: share link, group dot, messages, followers' ntfy | §11 | Should |
+| Check-ins for the people at home: open share link, check-ins with position and a note, followers' ntfy | §11 | Should |
+| OwnTracks: moving dot and trail on the share page, "Reached [hill]" entries | §11 | Should |
 | Expected back time and "no finish yet" notice | §11 | Should |
 | Money link (Splitwise or Monzo) | §8 | Should |
 | "Needed by the most people" hill suggestions | §12 | Should |
@@ -89,7 +90,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Tracking costs inside Baggr | §13 | Won't |
 | Public profiles and social features | §13 | **Never** |
 | Weather sources other than MWIS and Open-Meteo | §13 | Won't |
-| Satellite trackers (Garmin inReach) for live tracking | §11 | Won't |
+| Satellite trackers (Garmin inReach) | §11 | Won't |
 | Copying or storing Walkhighlands content (text, photos, route descriptions) | §13 | **Never** |
 
 ---
@@ -384,40 +385,49 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
 
 ---
 
-## 11. Live tracking
+## 11. Check-ins for the people at home
 
-While a walk is happening, the people at home can follow it.
+While a walk is happening, the people at home can follow it in two layers:
+
+1. **Check-ins** are the base. They're short, timestamped messages from the walkers, each with the place they were when they sent it. A check-in says where we were, when, and that we were fine, and that stays true however patchy the signal is. Every walker can send them from the walk page, with nothing to install.
+2. **A moving dot and trail** are added for walkers who install the **OwnTracks** app. It reports positions from the background. A web page can't do that, because phones stop sharing a page's location once the screen locks.
+
+Check-ins work without OwnTracks, and OwnTracks adds to check-ins rather than replacing them.
 
 ### What followers see
-- A **share link** for the walk day. It's unguessable, needs no account, and works for a partner or anyone else who isn't a member. It stops working 24 hours after the walk finishes.
-- A **map with a single dot** showing the group's latest position: the most recent fix from any walker who is sharing. The dot leaves a trail behind it, and the planned route and numbered hills are drawn underneath.
-- **"Last update 12 minutes ago"** shown prominently. Mobile signal in the hills is patchy, so a gap is normal and doesn't mean anything is wrong.
-- **Progress:** which hills have been reached, and what's next.
-- **A message feed** with the newest message first.
-- **ntfy:** followers can subscribe to the walk's **followers topic**, which is separate from the group's own topic, and get each message as a notification.
+- A **share link** for each walk day. It's unguessable and **anyone who has it can open it**. It needs no account, and a partner, parent or mountain rescue team can use it. It is read-only.
+- **It never expires.** The page stays as a record of the day. Any walker on that day can **turn the link off**, and **make a new one**, from the walk page.
+- **"Last check-in 12 minutes ago"** shown prominently, with the place and the time of day. Mobile signal in the hills is patchy, so a gap is normal and doesn't mean anything is wrong.
+- **A feed of check-ins**, newest first, such as "11:42 · On summit of Ben Cleuch · NN902006".
+- **A map** with a pin for each check-in that has a position, over the planned route and numbered hills. The latest pin is highlighted.
+- **A moving dot and trail**, when a walker is sharing through OwnTracks: the group's latest position (the most recent fix from any sharing walker), with the trail behind it, on the same map. Beside it is **"Last position 4 minutes ago"**, separate from the last check-in. With no OwnTracks walker, there is no dot, and the page shows check-ins only.
+- **Where they are:** the **OS grid reference** and the latitude and longitude of the latest check-in or position, whichever is newer, with its accuracy and the time it was sent. That's what Police and Mountain Rescue ask for. Followers can copy it.
+- **The plan:** the hills for the day in order, the **expected back time**, and who is on the walk (the safety card in §12).
+- **Progress:** which hills have been checked in at, and what's next.
+- **ntfy:** followers can subscribe to the walk's **followers topic**, which is separate from the group's own topic, and get each check-in as a notification.
+- **A plain note on the page:** this is a convenience, not a safety system. Check-ins may be late or missing without anything being wrong. In an emergency, call 999 and ask for Police, then Mountain Rescue.
 
-### Messages
+### Check-ins
 - **Quick buttons** for walkers on the walk page, one tap each:
   - "On summit of …"
   - "Heading down"
   - "Running late, back about …"
   - "Off the hill, all safe"
-- **Free-text messages** can be sent too.
-- **Automatic messages:**
-  - "Reached [hill]" when a position comes within about 100m of a planned summit
-  - "Walk started" and "Walk finished"
-- **Expected back time (optional):** if the walk isn't finished an hour after this time, followers get a "no finish yet" notice. It's information, not an alarm. Followers still need to know when to call 999 and ask for Police, then Mountain Rescue.
-
-### Where positions come from
-1. **The Baggr walk page, open on a phone.** This is simplest, with nothing to install. However, phones stop sharing a web page's location once the screen locks, so on its own this is unreliable.
-2. **The OwnTracks app (recommended).** It's free, runs on iPhone and Android, and in HTTP mode it posts each position to a URL. Baggr gives each walker a personal tracking URL, and the app sends positions in the background. If there's no signal, OwnTracks queues them and posts them later.
-3. **Not in version 1:** satellite messengers such as a Garmin inReach.
+- **Free-text check-ins** can be sent too.
+- **Position:** each check-in asks the phone for its location and attaches it, with its accuracy. If the phone won't give one, the check-in is still sent, with no pin.
+- **No signal:** the page keeps the check-in on the phone, with the time it was made, and sends it when signal returns. The page has to stay open for that to work.
+- **Automatic entries:** "Walk started" and "Walk finished". When OwnTracks is sharing, "Reached [hill]" is added when a position comes within about 100m of a planned summit.
+- **Expected back time (optional):** if the walk isn't finished an hour after this time, followers get a "no finish yet" notice. It's information, not an alarm.
 
 ### Starting and stopping
-- Any attendee taps **Start walk** on the plan day. Baggr only records positions from attendees who have chosen to share for that walk.
-- **Finish walk** stops tracking, and so does midnight.
-- After the walk, the trail can be **saved to the day as a GPX route** (§9), so "the route we actually did" is kept.
-- Raw positions are deleted after 30 days.
+- Any attendee taps **Start walk** on the plan day. Anyone on the walk can send check-ins while it is running. Baggr only records OwnTracks positions from attendees who have chosen to share for that walk.
+- **Finish walk** ends the walk and stops OwnTracks positions being recorded. The share link and its check-ins **stay**, and nothing is deleted automatically. Midnight doesn't stop the walk either, so multi-day walks work.
+
+### Where OwnTracks positions come from
+- **The OwnTracks app** is free and runs on iPhone and Android. In HTTP mode it posts each position to a URL. Baggr gives each walker a personal tracking URL, and the app sends positions in the background. If there's no signal, OwnTracks queues them and posts them later, so a gap in signal fills in afterwards.
+- **Raw positions are deleted after 30 days.** Check-ins are kept for good. A trail saved to the day as a GPX route (below) is kept too.
+- After the walk, the trail can be **saved to the day as a GPX route** (§9), so "the route we actually did" is kept. A saved route is drawn on the share page in place of the live trail.
+- **Not in version 1:** satellite messengers such as a Garmin inReach. A walker with one can paste its share page into a check-in message.
 
 ---
 
@@ -433,7 +443,7 @@ Smaller features, with priorities from the table at the top.
 | **Add to home screen (PWA)** | Should | Baggr opens like an app on a phone. |
 | **Lift sharing**: who's driving, free seats, pick-up points | Could | Most Munro days start with "who's driving?" |
 | **Calendar feed (.ics)** of planned walks | Could | Plans show up in everyone's phone calendar and update automatically. |
-| **Safety/route card**: plan, route, expected return time and party list, shareable by link with a non-walking contact | Could | Standard mountain safety practice. It fits naturally on the live tracking share page (§11). |
+| **Safety/route card**: plan, route, expected return time and party list, shareable by link with a non-walking contact | Could | Standard mountain safety practice. The check-in page (§11) already shows the plan, expected back time and who is on the walk; this Could is a standalone card to share before the walk. |
 | **Seasonal notices** on the plan page: deer-stalking season (Aug to Oct) with a link to Heading for the Scottish Hills, and a SAIS avalanche forecast link in winter | Could | Avoids an unwelcome surprise on the day. |
 
 ---
@@ -446,7 +456,7 @@ Left out of version 1, but could come back later.
 - Group photos and photo uploads (too intensive). Hill photos from Geograph are a separate Could.
 - Weather sources other than MWIS and Open-Meteo.
 - Tracking costs or splitting bills inside Baggr. A link out to Splitwise or Monzo is a Should (§12).
-- Satellite trackers (Garmin inReach) for live tracking.
+- Satellite trackers (Garmin inReach). A walker with one can paste its share page into a check-in message.
 
 ### Never
 Ruled out permanently.
@@ -488,8 +498,8 @@ Ruled out permanently.
 | Leaving a group or deleting an account | Ascents belong to the person; leaving a group changes nothing; deleting an account removes their ascents and the group's walks show a "former member" |
 | Brand colours | Hill green `#1F4D3A` and heather `#C9B5DD`, kept as design tokens |
 | ntfy topics | One topic per group; no per-person topics |
-| Live tracking positions | OwnTracks is the recommended source (§11) |
-| Geograph images | Hotlinked from Geograph's servers for now, with the CC BY-SA credit; downloading them is the fallback |
+| Where positions come from | Two sources (§11): a check-in carries the phone's position at the moment it is sent, and the OwnTracks app reports positions from the background for walkers who install it. Both are in version 1. |
+| Geograph images | Hotlinked from Geograph's servers, with the CC BY-SA credit and a link to each photo's Geograph page. Geograph's developer confirmed by email (16 Nov 2026) that this is fine for modest, non-commercial traffic using thumbnails or the 640px size, and asked that we download and serve our own copies if traffic grows large. |
 | Rating coverage | Go / Marginal / Poor is derived for the five Scottish MWIS areas only; the five English and Welsh areas show their forecast values with no rating |
 | DoBIH licence | CC BY 4.0: free to import and reuse, with the credit in §3 on every page that shows hill data |
 | How much of DoBIH | All of it (all countries, names, classifications, areas, maps); Scotland is the default view |
@@ -497,7 +507,7 @@ Ruled out permanently.
 | Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
-| Live tracking | In scope (Should): share link with one group dot and messages; ntfy for followers |
+| Check-ins for followers | In scope (Should): check-ins are the base and work for everyone; OwnTracks adds a moving dot and trail for walkers who install it. The share link is open to anyone who has it, needs no login, and **never expires**; any walker can turn it off and make a new one. Check-ins are kept for good; raw OwnTracks positions are deleted after 30 days. ntfy for followers. |
 | Weather beyond MWIS's 3 days | Open-Meteo outlook per hill, up to 14 days, clearly labelled |
 | Who can edit, confirm or close a plan | Any attendee |
 | Costs | Not tracked in Baggr; plans *should* carry a link to Splitwise or Monzo |
@@ -534,7 +544,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 
 10. **Maps and the history timeline** (§6).
 11. **Open-Meteo outlook** (§4).
-12. **Live tracking** (§11).
+12. **Check-ins for the people at home** (§11).
 13. **Should features from §12**: money link, hill suggestions, daylight, PWA.
 
 **Coulds**
@@ -568,7 +578,7 @@ _For Code to check against the database and refine._
 | `poll_options` / `poll_votes` | `walk_id`, `start_date`, `chosen` (bool); `poll_option_id`, `user_id`, `vote` |
 | `routes` | `walk_day_id` or `hill_id`, `file_path`, `distance_m`, `ascent_m` |
 | `forecasts` | `source` (mwis/open-meteo), `mwis_area` or `hill_id`, `forecast_date`, `issued_at`, `headline`, `wind_text`, `wind_max_mph`, `rain_text`, `cloud_free_text`, `cloud_free_max_pct`, `freezing_level_text`, `rating` (nullable), `raw` |
-| `tracking_sessions` | `walk_day_id`, `share_token`, `followers_ntfy_topic`, `started_at`, `finished_at`, `expected_back_at` |
-| `positions` | `tracking_session_id`, `user_id`, `lat`, `lon`, `alt`, `accuracy`, `recorded_at` (deleted after 30 days) |
-| `walk_messages` | `tracking_session_id`, `user_id` (null for automatic), `kind` (manual/auto), `body`, `created_at` |
+| `tracking_sessions` | `walk_day_id`, `share_token` (null once turned off), `followers_ntfy_topic`, `started_at`, `finished_at`, `expected_back_at` |
+| `check_ins` | `tracking_session_id`, `user_id` (null for automatic), `kind` (manual/auto), `body`, `lat`, `lon`, `accuracy`, `made_at` (when the walker sent it), `created_at` (when it arrived). Kept for good. |
+| `positions` | `tracking_session_id`, `user_id`, `lat`, `lon`, `alt`, `accuracy`, `recorded_at`. OwnTracks fixes only; deleted after 30 days. |
 | `notifications_log` | `walk_id`, `type`, `sent_at`, `body` |
