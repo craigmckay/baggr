@@ -10,13 +10,19 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
-#[Signature('hills:fetch-photos {--force : Re-fetch even for hills that already have a photo}')]
+#[Signature('hills:fetch-photos {--force : Re-fetch even for hills that already have a photo} {--limit= : Stop after this many hills, to work in batches}')]
 #[Description('Find a summit photo for each hill on Geograph (CC BY-SA 2.0) by grid reference')]
 class FetchHillPhotos extends Command
 {
     private const ENDPOINT = 'https://api.geograph.org.uk/syndicator.php';
 
     private const USER_AGENT = 'Baggr/1.0 (+https://baggr.co.uk; hill photo lookup)';
+
+    /** DoBIH classes for the four Tops lists, which get no photo. */
+    private const TOPS_LISTS = ['MT', 'CT', 'GT', 'DT'];
+
+    /** The main lists: a hill on one of these is a hill in its own right. */
+    private const MAIN_LISTS = ['M', 'C', 'G', 'D'];
 
     /** Pause between API requests, to stay well within polite use. */
     private const THROTTLE_MS = 1000;
@@ -41,8 +47,27 @@ class FetchHillPhotos extends Command
             return self::FAILURE;
         }
 
+        $limit = $this->option('limit');
+
+        if ($limit !== null && (! ctype_digit((string) $limit) || (int) $limit < 1)) {
+            $this->error('--limit must be a whole number of hills, such as --limit=500.');
+
+            return self::FAILURE;
+        }
+
+        // Tops-only hills get no photo; a hill on a Tops list that is also on a
+        // main list (a Corbett that is a Munro Top, say) still does. Hills with no
+        // position can't be searched for.
         $hills = Hill::query()
+            ->whereNotNull('grid_ref')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereNot(fn ($query) => $query
+                ->whereHas('classes', fn ($classes) => $classes->whereIn('hill_classes.code', self::TOPS_LISTS))
+                ->whereDoesntHave('classes', fn ($classes) => $classes->whereIn('hill_classes.code', self::MAIN_LISTS)))
             ->when(! $this->option('force'), fn ($query) => $query->whereNull('photo_url'))
+            ->orderBy('id')
+            ->when($limit !== null, fn ($query) => $query->limit((int) $limit))
             ->get();
 
         if ($hills->isEmpty()) {
