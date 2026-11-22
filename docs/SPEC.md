@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.12, 21 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.13, 22 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -375,7 +375,7 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
 ## 9. Routes (GPX)
 
 - Upload one or more GPX files to a plan day, or to a hill as a "route we used".
-- Each route is **drawn on a map** with an Ordnance Survey base layer from the OS Maps API (§14). Every map in Baggr uses the same base layer.
+- Each route is **drawn on a map** on the Thunderforest Outdoors base layer (§14). Every map in Baggr uses the same base layer.
 - Baggr calculates distance, total ascent and an estimated time using Naismith's rule, and shows an **elevation profile**.
 - **Download** the original GPX file.
 - Baggr checks which Munros the route passes within roughly 100m of, and offers to add them to that day's hills.
@@ -508,7 +508,7 @@ Ruled out permanently.
 | Email verification | Required, except for an account made through an emailed invitation (the link proves the address) and accounts made with `users:create`, which are already verified. Verification emails go through Resend. |
 | Admins removing admins | Any admin can change another admin's role or remove them, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
-| Map tiles | Ordnance Survey, through the OS Maps API with a free key. Start with the free OS OpenData layers (unlimited); switch to the 1:25,000 / 1:50,000 Leisure layers if OS confirm Baggr qualifies for the Premium Plan. One base layer for every map in Baggr. |
+| Map tiles | **Thunderforest Outdoors** (OpenStreetMap data, with contours and hillshading), on its free Hobby Project plan: 150,000 tile requests a month, with an API key in the page. **Preferred until we get a definitive answer from Ordnance Survey** (§15). One base layer for every map in Baggr, set in one place so it can be swapped. Rules from Thunderforest's terms: attribution to Thunderforest and OpenStreetMap contributors with working links ("Maps © Thunderforest, Data © OpenStreetMap contributors") on every map, even though Baggr is private; tiles may be cached in the browser or on the device, but **Baggr never caches or proxies tiles on its own server** and never bulk-downloads or pre-caches areas; the free plan is at Thunderforest's discretion and can be withdrawn. **Fallback:** the free OS OpenData styles through the OS Maps API (attribution "Contains OS data © Crown copyright and database right [year]"). The 1:25,000 and 1:50,000 Leisure layers are **not** planned: OS's chat assistant (22 Nov 2026, AI-generated, so not definitive) said the OS Maps API, premium mapping included, is not for personal or small-group projects, and that premium use needs a paid agreement and a card on file. |
 | Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
 | Which hills get photos | Every hill except those only on one of the four Tops lists, fetched locally in batches and shipped in the database dump |
@@ -532,8 +532,8 @@ Ruled out permanently.
 
 ## 15. Open questions
 
-1. **MWIS permission:** Craig is to email MWIS (draft written, not yet sent) about showing extracted values (§4), for all ten areas, five Scottish and five English and Welsh. Needed before build step 4.
-2. **OS Maps:** Craig creates an OS Data Hub account and asks OS whether Baggr (a private app for a few friends) qualifies for the Premium Plan, which the Leisure maps need. Also check the OpenData attribution wording, whether a key can be restricted to baggr.co.uk, and if not, serve tiles through Baggr. Needed before the first map (step 2 onwards).
+1. **MWIS permission:** Craig sent MWIS a request through their contact form on 22 Nov 2026, covering the logo and linking, and a daily 07:00 read of the ten areas showing a few short extracts (headline, wind, how wet, cloud-free chance, freezing level), credited and linked. Waiting for a reply. If they say no, Baggr shows the area and a link only (§4). Needed before build step 4.
+2. **Map provider:** Thunderforest Outdoors is preferred (§14) until we get a definitive reply. To do: Craig signs up for the free Thunderforest plan (checking that it asks for no payment card and telling Claude before accepting any terms that mention charges), and may still ask OS support through the API enquiry form for a human answer on whether a small private project can use the OS Maps API, and on restricting a key to baggr.co.uk. Not needed before step 8 (GPX routes), the first map.
 _Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026); email service, now Resend and tested (21 Nov 2026)._
 
 ---
