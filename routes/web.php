@@ -33,6 +33,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('walks', 'pages::walks')->name('walks.index');
     Route::livewire('walks/log', 'pages::walk-log')->name('walks.log');
     Route::livewire('walks/{walk}', 'pages::walk-show')->name('walks.show');
+
+    Route::livewire('my-hills', 'pages::my-hills')->name('my-hills.index');
+    Route::livewire('my-hills/to-do', 'pages::my-hills-todo')->name('my-hills.todo');
 });
 
 require __DIR__.'/settings.php';

@@ -16,6 +16,9 @@
                         {{ __('Hills') }}
                     </flux:sidebar.item>
                     @auth
+                        <flux:sidebar.item icon="check-circle" :href="route('my-hills.index')" :current="request()->routeIs('my-hills.*')" wire:navigate>
+                            {{ __('My hills') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="flag" :href="route('walks.index')" :current="request()->routeIs('walks.*')" wire:navigate>
                             {{ __('Walks') }}
                         </flux:sidebar.item>

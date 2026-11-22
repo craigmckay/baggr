@@ -22,6 +22,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string $colour
+ * @property string $hill_grouping
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -37,6 +39,29 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /** The colour of a person's solo hills until they choose another (brand heather). */
+    public const DEFAULT_COLOUR = '#C9B5DD';
+
+    /**
+     * The same defaults as the database, so a person just created has them too.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = [
+        'colour' => self::DEFAULT_COLOUR,
+        'hill_grouping' => 'mwis',
+    ];
+
+    /**
+     * The colours a person can pick for their solo hills, by name.
+     *
+     * @return array<string, string>
+     */
+    public static function colours(): array
+    {
+        return ['Light heather' => self::DEFAULT_COLOUR] + Group::COLOURS;
+    }
 
     /**
      * Get the attributes that should be cast.
