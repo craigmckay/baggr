@@ -27,6 +27,9 @@ class FetchHillPhotos extends Command
     /** Pause between API requests, to stay well within polite use. */
     private const THROTTLE_MS = 1000;
 
+    /** How many hills to read from the database at a time. */
+    private const CHUNK_SIZE = 200;
+
     /**
      * Photos further than this from the summit are ignored. Geograph falls
      * back to a place-name search when it can't parse a location, so this
@@ -65,24 +68,39 @@ class FetchHillPhotos extends Command
             ->whereNot(fn ($query) => $query
                 ->whereHas('classes', fn ($classes) => $classes->whereIn('hill_classes.code', self::TOPS_LISTS))
                 ->whereDoesntHave('classes', fn ($classes) => $classes->whereIn('hill_classes.code', self::MAIN_LISTS)))
-            ->when(! $this->option('force'), fn ($query) => $query->whereNull('photo_url'))
-            ->orderBy('id')
-            ->when($limit !== null, fn ($query) => $query->limit((int) $limit))
-            ->get();
+            ->when(! $this->option('force'), fn ($query) => $query->whereNull('photo_url'));
 
-        if ($hills->isEmpty()) {
+        $total = $hills->count();
+
+        if ($limit !== null) {
+            $total = min($total, (int) $limit);
+        }
+
+        if ($total === 0) {
             $this->info('Nothing to fetch.');
 
             return self::SUCCESS;
         }
 
-        $bar = $this->output->createProgressBar($hills->count());
+        $bar = $this->output->createProgressBar($total);
         $bar->start();
 
         $failures = [];
 
-        foreach ($hills as $index => $hill) {
-            if ($index > 0) {
+        // Read the hills a few hundred at a time: loading all ~20,000 at once
+        // runs out of memory. Only the columns the lookup needs are selected.
+        $queue = $hills
+            ->select(['id', 'name', 'grid_ref', 'latitude', 'longitude'])
+            ->lazyById(self::CHUNK_SIZE);
+
+        $done = 0;
+
+        foreach ($queue as $hill) {
+            if ($done >= $total) {
+                break;
+            }
+
+            if ($done > 0) {
                 Sleep::for(self::THROTTLE_MS)->milliseconds();
             }
 
@@ -110,6 +128,7 @@ class FetchHillPhotos extends Command
                 $failures[] = $hill->name;
             }
 
+            $done++;
             $bar->advance();
         }
 
