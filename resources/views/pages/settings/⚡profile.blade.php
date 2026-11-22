@@ -1,12 +1,14 @@
 <?php
 
 use App\Concerns\ProfileValidationRules;
+use App\Models\User;
 /* @chisel-email-verification */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 /* @end-chisel-email-verification */
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -16,6 +18,7 @@ new #[Title('Profile settings')] class extends Component {
 
     public string $name = '';
     public string $email = '';
+    public string $colour = User::DEFAULT_COLOUR;
 
     /**
      * Mount the component.
@@ -24,6 +27,7 @@ new #[Title('Profile settings')] class extends Component {
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
+        $this->colour = Auth::user()->colour;
     }
 
     /**
@@ -33,9 +37,12 @@ new #[Title('Profile settings')] class extends Component {
     {
         $user = Auth::user();
 
-        $validated = $this->validate($this->profileRules($user->id));
+        $validated = $this->validate($this->profileRules($user->id) + [
+            'colour' => ['required', Rule::in(User::colours())],
+        ]);
 
-        $user->fill($validated);
+        $user->fill(collect($validated)->only(['name', 'email'])->all());
+        $user->colour = $validated['colour'];
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -112,6 +119,26 @@ new #[Title('Profile settings')] class extends Component {
                 @endif
                 {{-- @end-chisel-email-verification --}}
             </div>
+
+            <flux:field>
+                <flux:label>{{ __('Your colour') }}</flux:label>
+                <flux:description>{{ __('Shows the hills you climb solo on My hills.') }}</flux:description>
+
+                <div class="flex flex-wrap gap-3 pt-1" role="radiogroup" aria-label="{{ __('Your colour') }}">
+                    @foreach (User::colours() as $colourName => $hex)
+                        <label class="cursor-pointer">
+                            <input type="radio" wire:model="colour" value="{{ $hex }}" class="peer sr-only" />
+                            <span
+                                title="{{ $colourName }}"
+                                class="block size-8 rounded-full ring-offset-2 ring-offset-white peer-checked:ring-2 peer-checked:ring-zinc-900 peer-focus-visible:ring-2 peer-focus-visible:ring-zinc-500 dark:ring-offset-zinc-800 dark:peer-checked:ring-white"
+                                style="background: {{ $hex }}"
+                            ><span class="sr-only">{{ $colourName }}</span></span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <flux:error name="colour" />
+            </flux:field>
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
