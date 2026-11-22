@@ -30,6 +30,37 @@ new #[Title('Hills still to do')] class extends Component
     /** How regions are grouped; remembered on the person. */
     public string $grouping = 'mwis';
 
+    /** Regions the person has flipped from their starting state (open or shut). */
+    public array $flipped = [];
+
+    /** How many hills the tallest-first list shows. */
+    public int $shown = 100;
+
+    public function toggle(string $key): void
+    {
+        $this->flipped = in_array($key, $this->flipped, true)
+            ? array_values(array_diff($this->flipped, [$key]))
+            : [...$this->flipped, $key];
+    }
+
+    public function isOpen(string $key): bool
+    {
+        return $this->startsOpen() !== in_array($key, $this->flipped, true);
+    }
+
+    public function showMore(): void
+    {
+        $this->shown += 100;
+    }
+
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['list', 'scope', 'sort', 'grouping'], true)) {
+            $this->flipped = [];
+            $this->shown = 100;
+        }
+    }
+
     public function mount(): void
     {
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
@@ -146,7 +177,7 @@ new #[Title('Hills still to do')] class extends Component
         </flux:callout>
     @elseif ($sort === 'height')
         <ul class="divide-y divide-zinc-200 dark:divide-zinc-700">
-            @foreach ($this->tallestFirst as $row)
+            @foreach (array_slice($this->tallestFirst, 0, $shown) as $row)
                 <li wire:key="hill-{{ $row['hill']->id }}" class="flex items-center gap-3 py-2 text-sm">
                     <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
                     <span class="truncate text-zinc-500">{{ $row['region'] }}</span>
@@ -154,19 +185,25 @@ new #[Title('Hills still to do')] class extends Component
                 </li>
             @endforeach
         </ul>
+
+        @if (count($this->tallestFirst) > $shown)
+            <flux:button wire:click="showMore" class="w-full">{{ __('Show more') }} ({{ count($this->tallestFirst) - $shown }})</flux:button>
+        @endif
     @else
         <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
             @foreach ($this->sections as $section)
-                <div x-data="{ open: {{ $this->startsOpen() ? 'true' : 'false' }} }" wire:key="section-{{ $section['key'] }}" class="py-3">
-                    <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" class="flex w-full items-center justify-between gap-3 text-start">
+                @php($isOpen = $this->isOpen($section['key']))
+                <div wire:key="section-{{ $section['key'] }}" class="py-3">
+                    <button type="button" wire:click="toggle(@js($section['key']))" aria-expanded="{{ $isOpen ? 'true' : 'false' }}" class="flex w-full items-center justify-between gap-3 text-start">
                         <span class="font-medium">{{ $section['label'] }}</span>
                         <span class="flex items-center gap-2 text-sm text-zinc-500 tabular-nums">
                             {{ __(':count to do', ['count' => count($section['hills'])]) }}
-                            <flux:icon.chevron-down class="size-4 transition" x-bind:class="open && 'rotate-180'" />
+                            <flux:icon.chevron-down @class(['size-4 transition', 'rotate-180' => $isOpen]) />
                         </span>
                     </button>
 
-                    <ul x-show="open" x-cloak class="mt-3 space-y-1 text-sm">
+                    @if ($isOpen)
+                    <ul class="mt-3 space-y-1 text-sm">
                         @foreach ($section['hills'] as $row)
                             <li class="flex items-center gap-2" wire:key="hill-{{ $section['key'] }}-{{ $row['hill']->id }}">
                                 <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
@@ -175,6 +212,7 @@ new #[Title('Hills still to do')] class extends Component
                             </li>
                         @endforeach
                     </ul>
+                    @endif
                 </div>
             @endforeach
         </div>

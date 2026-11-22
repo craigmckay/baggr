@@ -165,9 +165,8 @@ class HillProgress
      */
     private function done(): array
     {
-        $listIds = $this->hills()->pluck('id')->flip();
-
-        return $this->done ??= array_intersect_key($this->allDone(), $listIds->all());
+        // Worked out once: this is called for every hill on the list.
+        return $this->done ??= array_intersect_key($this->allDone(), $this->hills()->pluck('id')->flip()->all());
     }
 
     /**

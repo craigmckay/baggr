@@ -23,6 +23,26 @@ new #[Title('My hills')] class extends Component
     /** How regions are grouped; remembered on the person. */
     public string $grouping = 'mwis';
 
+    /** Regions whose hills are shown. Only these are drawn, so a long list stays quick. */
+    public array $open = [];
+
+    public function toggle(string $key): void
+    {
+        $this->open = in_array($key, $this->open, true)
+            ? array_values(array_diff($this->open, [$key]))
+            : [...$this->open, $key];
+    }
+
+    public function updatedList(): void
+    {
+        $this->open = [];
+    }
+
+    public function updatedScope(): void
+    {
+        $this->open = [];
+    }
+
     public function mount(): void
     {
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
@@ -125,12 +145,13 @@ new #[Title('My hills')] class extends Component
 
         <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
             @foreach ($this->sections as $section)
-                <div x-data="{ open: false }" wire:key="section-{{ $section['key'] }}" class="py-3">
-                    <button type="button" x-on:click="open = ! open" x-bind:aria-expanded="open" class="flex w-full items-center justify-between gap-3 text-start">
+                @php($isOpen = in_array($section['key'], $this->open, true))
+                <div wire:key="section-{{ $section['key'] }}" class="py-3">
+                    <button type="button" wire:click="toggle(@js($section['key']))" aria-expanded="{{ $isOpen ? 'true' : 'false' }}" class="flex w-full items-center justify-between gap-3 text-start">
                         <span class="font-medium">{{ $section['label'] }}</span>
                         <span class="flex items-center gap-2 text-sm text-zinc-500 tabular-nums">
                             {{ $section['done'] }} / {{ $section['total'] }}
-                            <flux:icon.chevron-down class="size-4 transition" x-bind:class="open && 'rotate-180'" />
+                            <flux:icon.chevron-down @class(['size-4 transition', 'rotate-180' => $isOpen]) />
                         </span>
                     </button>
 
@@ -151,7 +172,8 @@ new #[Title('My hills')] class extends Component
                         </div>
                     @endif
 
-                    <ul x-show="open" x-cloak class="mt-3 space-y-1 text-sm">
+                    @if ($isOpen)
+                    <ul class="mt-3 space-y-1 text-sm">
                         @foreach ($section['hills'] as $row)
                             <li class="flex items-center gap-2" wire:key="hill-{{ $section['key'] }}-{{ $row['hill']->id }}">
                                 <span class="size-3 shrink-0 rounded-sm {{ $row['colour'] === null ? 'border border-zinc-400 dark:border-zinc-500' : '' }}" @if ($row['colour'] !== null) style="background: {{ $row['colour'] }}" @endif></span>
@@ -160,6 +182,7 @@ new #[Title('My hills')] class extends Component
                             </li>
                         @endforeach
                     </ul>
+                    @endif
                 </div>
             @endforeach
         </div>

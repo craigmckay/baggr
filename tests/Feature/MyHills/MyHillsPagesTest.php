@@ -24,6 +24,28 @@ class MyHillsPagesTest extends TestCase
         return $hill;
     }
 
+    /**
+     * Hills made in bulk: the factory's random names run out after a few hundred.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function manyMunros(int $count, array $attributes = []): void
+    {
+        $class = HillClass::firstOrCreate(['code' => 'M'], ['name' => 'Munro']);
+
+        for ($i = 1; $i <= $count; $i++) {
+            $hill = new Hill;
+            $hill->forceFill([
+                'name' => "Ben Number{$i}",
+                'slug' => "ben-number-{$i}",
+                'dobih_number' => 9000 + $i,
+                'height_m' => 1000 + $i,
+                'region' => 'West Highlands',
+            ] + $attributes)->save();
+            $hill->classes()->attach($class);
+        }
+    }
+
     private function walk(User $user, Hill $hill, ?Group $group = null): void
     {
         app(LogWalk::class)->handle($user, [
@@ -170,6 +192,59 @@ class MyHillsPagesTest extends TestCase
 
         Livewire::actingAs($me)->test('pages::my-hills-todo')->assertDontSee('Ben Together');
         Livewire::actingAs($me)->withQueryParams(['scope' => 'solo'])->test('pages::my-hills-todo')->assertSee('Ben Together');
+    }
+
+    public function test_my_hills_only_draws_a_regions_hills_once_it_is_opened(): void
+    {
+        $me = User::factory()->create();
+        $this->munro(['name' => 'Ben Hidden', 'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
+
+        Livewire::actingAs($me)->test('pages::my-hills')
+            ->assertDontSee('Ben Hidden')
+            ->call('toggle', 'mwis-WH')
+            ->assertSee('Ben Hidden')
+            ->call('toggle', 'mwis-WH')
+            ->assertDontSee('Ben Hidden');
+    }
+
+    public function test_changing_the_list_shuts_the_open_regions(): void
+    {
+        Livewire::actingAs(User::factory()->create())->test('pages::my-hills')
+            ->call('toggle', 'mwis-WH')
+            ->set('list', 'C')
+            ->assertSet('open', []);
+    }
+
+    public function test_a_long_to_do_list_starts_shut_and_opens_a_region_on_request(): void
+    {
+        $this->manyMunros(301, ['mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
+
+        Livewire::actingAs(User::factory()->create())->test('pages::my-hills-todo')
+            ->assertDontSee('Ben Number1<', false)
+            ->call('toggle', 'mwis-WH')
+            ->assertSee('Ben Number1<', false);
+    }
+
+    public function test_a_short_to_do_list_starts_open(): void
+    {
+        $this->munro(['name' => 'Ben Showing', 'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
+
+        Livewire::actingAs(User::factory()->create())->test('pages::my-hills-todo')
+            ->assertSee('Ben Showing')
+            ->call('toggle', 'mwis-WH')
+            ->assertDontSee('Ben Showing');
+    }
+
+    public function test_the_tallest_first_list_shows_a_hundred_at_a_time(): void
+    {
+        $this->manyMunros(120);
+
+        Livewire::actingAs(User::factory()->create())->test('pages::my-hills-todo')
+            ->set('sort', 'height')
+            ->assertSee('Ben Number120<', false)
+            ->assertDontSee('Ben Number1<', false)
+            ->call('showMore')
+            ->assertSee('Ben Number1<', false);
     }
 
     public function test_the_sidebar_links_to_my_hills(): void
