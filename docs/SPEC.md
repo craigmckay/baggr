@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.13, 22 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.14, 22 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -144,7 +144,7 @@ The list of lists is confirmed: Marilyns are in (added in v0.9); Furths are not.
 - **Areas.** DoBIH areas come in several types, shown by the first letter of the area code: DoBIH regions (D, e.g. "Ochil Hills"), Murray sections (M, the SMC sections), RHB sections (R), islands (I), current and historic counties (C, A) and unitary authorities (U). Every type is kept, so a walk can be placed in any of them. A hill can be in several areas. Hills with no tracked list, such as most of the Ochils, are still ordinary hills that can be picked, planned and logged. They just don't count towards a list total.
 - **Not copied from the Access file.** The `.mdb` can't be read on the live host. The importer runs locally and the result reaches the live site as a database dump, as the first deployment did.
 - **Linking out:** Walkhighlands has pages for Corbetts, Grahams and Donalds too, so the same slug-matching approach applies. The link is optional, because many hills have no page.
-- **MWIS areas:** a mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map. Hills outside those ten areas, for example the Cheviots, have no MWIS area.
+- **MWIS areas:** built in step 3, before weather. A mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map. Hills outside those ten areas, for example the Cheviots, have no MWIS area.
 - **Choosing a list:** every hill view, stats page and history has a list selector. Munros is the default, and the choice is remembered.
 - **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills that are only on one of the four Tops lists, which show none (a hill on a Tops list that is also on a main list, such as a Corbett that is a Munro Top, still gets one). They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
 - **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**.
@@ -158,6 +158,7 @@ Wherever hills are grouped, the user picks one of three, and the choice is remem
 
 ### Changes to the hill list
 - **Choose a list** (Munros by default).
+- **Choose an area**, such as the Ochil Hills. Any DoBIH area (§3, Areas) can be picked, and the list narrows to the hills in it. With a list chosen as well (say Marilyns) it shows only that list's hills in the area; with no list it shows every hill in the area, whatever its category. Only hills on a list count towards a total. The same area picker is on My hills and the to-do list.
 - **Group by** MWIS area, SMC section or RHB section.
 - **Show the MWIS area on every hill**, in the list and on the hill's page, as a badge linking to that area's forecast.
 - **Filters:** _Not done by me_, _Not done by anyone in [group]_, _Done by me_, and by height.
@@ -520,7 +521,8 @@ Ruled out permanently.
 | Rating coverage | Go / Marginal / Poor is derived for the five Scottish MWIS areas only; the five English and Welsh areas show their forecast values with no rating |
 | DoBIH licence | CC BY 4.0: free to import and reuse, with the credit in §3 on every page that shows hill data |
 | How much of DoBIH | All of it (all countries, names, classifications, areas, maps); Scotland is the default view |
-| MWIS area for new hills | A mapping table from DoBIH area to MWIS area; hills inherit it. The 282 Munros keep their curated MWIS area. |
+| MWIS area for new hills | A mapping table from DoBIH area to MWIS area, built in step 3; hills inherit it. The 282 Munros keep their curated MWIS area. Hills outside the ten MWIS areas show "no MWIS area". |
+| Area filter | Any DoBIH area can be picked on the hill list, My hills and the to-do list, alone or with a list (v0.14) |
 | Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
@@ -547,13 +549,13 @@ The Musts come first, then the Shoulds, then the Coulds.
 0. **Done (release 3).** **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
 1. **Groups, walks and ascents** (§2, §5, §8.1): groups with the four roles, invitations by email and the reusable link (Visitors and approval), walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
-3. **Hill list improvements** (§3): grouping, the MWIS badge, filters.
+3. **Hill list improvements** (§3): grouping, the MWIS badge, filters, the area filter, and the DoBIH area to MWIS area mapping for every hill.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the region view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
 7. **Notifications** (§10). Includes the ntfy alert for Follower comments (§11).
 8. **GPX routes** (§9): upload, draw, download.
-9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills. **Mostly done:** the whole-DoBIH import and the list selector, including Marilyns, are live (releases 4 and 5). Still to do: the MWIS mapping for the new hills, and running the Geograph photo fetch for them.
+9. **Other hill lists** (§3): import, list selector, MWIS mapping for the new hills. **Mostly done:** the whole-DoBIH import and the list selector, including Marilyns, are live (releases 4 and 5). The MWIS mapping moved into step 3 (v0.14). Still to do: running the Geograph photo fetch for the new hills.
 
 **Shoulds**
 
