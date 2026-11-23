@@ -2,11 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Support\MwisAreaMapper;
 use Generator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -66,6 +68,11 @@ class ImportDobih extends Command
         if ($this->skipped > 0) {
             $this->warn("Skipped {$this->skipped} links to a hill, area, class or map sheet missing from the source.");
         }
+
+        // The areas were rebuilt, so work out each hill's MWIS area again and refresh the area picker.
+        $mapped = app(MwisAreaMapper::class)->run();
+        Cache::forget('area-options');
+        $this->line(sprintf('%-16s %s', 'mwis areas', number_format($mapped['mapped'])));
 
         $this->info('DoBIH import finished. Version in config/dobih.php is '.config('dobih.version').'.');
 

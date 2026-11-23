@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MwisAreas;
 use Database\Factories\HillFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,7 @@ class Hill extends Model
         'region',
         'walkhighlands_url',
         'mwis_forecast_url',
+        'mwis_area',
         'grid_ref',
         'latitude',
         'longitude',
@@ -51,6 +53,26 @@ class Hill extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * The MWIS forecast area the hill belongs to, or null if MWIS covers none
+     * that it sits in. It is the mapped area, or for a Munro the area its stored
+     * forecast link points at.
+     *
+     * @return array{slug: string, code: string, name: string, url: string, order: int}|null
+     */
+    public function mwisArea(): ?array
+    {
+        return MwisAreas::find($this->mwis_area) ?? MwisAreas::fromUrl($this->mwis_forecast_url);
+    }
+
+    /**
+     * @return HasMany<Ascent, $this>
+     */
+    public function ascents(): HasMany
+    {
+        return $this->hasMany(Ascent::class);
     }
 
     /**

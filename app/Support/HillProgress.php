@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\HillGrouping;
+use App\Models\Area;
 use App\Models\Ascent;
 use App\Models\Group;
 use App\Models\Hill;
@@ -16,7 +17,9 @@ use Illuminate\Support\Facades\DB;
  * A hill counts as done once the person has at least one ascent of it, and the
  * first ascent decides its colour: the person's own colour for a solo walk, or
  * the group's colour for a walk with a group. The scope narrows which ascents
- * are looked at: "all", "solo" (walks with no group) or a group's id.
+ * are looked at: "all", "solo" (walks with no group) or a group's id. An area
+ * (a DoBIH area code, such as D002 for the Ochil Hills) narrows the list to the
+ * hills in it, and so narrows the totals too.
  */
 class HillProgress
 {
@@ -28,6 +31,8 @@ class HillProgress
 
     private string $scope;
 
+    private string $area;
+
     /** @var Collection<int, Hill>|null */
     private ?Collection $hills = null;
 
@@ -37,8 +42,11 @@ class HillProgress
     /** @var array<int, string>|null The same for every hill, whatever the list */
     private ?array $everything = null;
 
-    public function __construct(private readonly User $user, string $list, string $scope = self::ALL)
+    public function __construct(private readonly User $user, string $list, string $scope = self::ALL, string $area = '')
     {
+        // An area that isn't one is ignored, as a made-up list is.
+        $this->area = $area !== '' && Area::query()->where('code', $area)->exists() ? $area : '';
+
         $this->list = array_key_exists($list, config('dobih.lists')) ? $list : (string) array_key_first(config('dobih.lists'));
 
         // A group only counts if the person is in it.
@@ -59,6 +67,11 @@ class HillProgress
         return $this->scope;
     }
 
+    public function area(): string
+    {
+        return $this->area;
+    }
+
     /**
      * Every hill on the list, tallest first.
      *
@@ -67,8 +80,9 @@ class HillProgress
     public function hills(): Collection
     {
         return $this->hills ??= Hill::query()
-            ->select(['id', 'name', 'slug', 'height_m', 'region', 'mwis_forecast_url', 'smc_section', 'smc_section_description', 'rhb_section', 'rhb_section_description'])
+            ->select(['id', 'name', 'slug', 'height_m', 'region', 'mwis_forecast_url', 'mwis_area', 'dobih_section', 'smc_section', 'smc_section_description', 'rhb_section', 'rhb_section_description'])
             ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list))
+            ->when($this->area !== '', fn ($query) => $query->whereHas('areas', fn ($areas) => $areas->where('areas.code', $this->area)))
             ->orderByDesc('height_m')
             ->orderBy('name')
             ->get();
@@ -137,8 +151,15 @@ class HillProgress
     {
         $doneIds = array_keys($this->allDone());
 
+        $inArea = fn ($query) => $query->whereIn('class_hill.hill_id', fn ($hills) => $hills
+            ->select('area_hill.hill_id')
+            ->from('area_hill')
+            ->join('areas', 'areas.id', '=', 'area_hill.area_id')
+            ->where('areas.code', $this->area));
+
         $counts = fn (array $ids) => DB::table('class_hill')
             ->join('hill_classes', 'hill_classes.id', '=', 'class_hill.hill_class_id')
+            ->when($this->area !== '', $inArea)
             ->when($ids !== [], fn ($query) => $query->whereIn('class_hill.hill_id', $ids))
             ->selectRaw('hill_classes.code as code, count(*) as aggregate')
             ->groupBy('hill_classes.code')

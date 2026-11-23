@@ -23,6 +23,10 @@ new #[Title('Hills still to do')] class extends Component
     #[Url]
     public string $scope = 'all';
 
+    /** A DoBIH area code, or empty for anywhere. */
+    #[Url]
+    public string $area = '';
+
     /** "region" keeps the hills in their regions; "height" is one list, tallest first. */
     #[Url]
     public string $sort = 'region';
@@ -55,7 +59,7 @@ new #[Title('Hills still to do')] class extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['list', 'scope', 'sort', 'grouping'], true)) {
+        if (in_array($property, ['list', 'scope', 'area', 'sort', 'grouping'], true)) {
             $this->flipped = [];
             $this->shown = 100;
         }
@@ -82,7 +86,7 @@ new #[Title('Hills still to do')] class extends Component
     #[Computed]
     public function progress(): HillProgress
     {
-        return new HillProgress(Auth::user(), $this->list, $this->scope);
+        return new HillProgress(Auth::user(), $this->list, $this->scope, $this->area);
     }
 
     /**
@@ -152,7 +156,7 @@ new #[Title('Hills still to do')] class extends Component
     <div>
         <flux:heading size="xl">{{ __('Hills still to do') }}</flux:heading>
         <flux:subheading>
-            {{ config('dobih.lists')[$this->progress->list()] }}:
+            {{ config('dobih.lists')[$this->progress->list()] }}@if ($this->progress->area() !== ''), {{ \App\Support\AreaOptions::name($this->progress->area()) }}@endif:
             {{ __(':count to go', ['count' => $this->todoCount()]) }}
         </flux:subheading>
     </div>
@@ -165,7 +169,7 @@ new #[Title('Hills still to do')] class extends Component
             <flux:select.option value="height">{{ __('Sort by height') }}</flux:select.option>
         </flux:select>
 
-        <flux:link href="{{ route('my-hills.index', ['list' => $this->progress->list(), 'scope' => $this->progress->scope()]) }}" wire:navigate>
+        <flux:link href="{{ route('my-hills.index', ['list' => $this->progress->list(), 'scope' => $this->progress->scope(), 'area' => $this->progress->area()]) }}" wire:navigate>
             {{ __('Back to my hills') }}
         </flux:link>
     </div>

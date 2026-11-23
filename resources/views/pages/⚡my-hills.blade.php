@@ -20,6 +20,10 @@ new #[Title('My hills')] class extends Component
     #[Url]
     public string $scope = 'all';
 
+    /** A DoBIH area code, or empty for anywhere. */
+    #[Url]
+    public string $area = '';
+
     /** How regions are grouped; remembered on the person. */
     public string $grouping = 'mwis';
 
@@ -39,6 +43,11 @@ new #[Title('My hills')] class extends Component
     }
 
     public function updatedScope(): void
+    {
+        $this->open = [];
+    }
+
+    public function updatedArea(): void
     {
         $this->open = [];
     }
@@ -64,7 +73,7 @@ new #[Title('My hills')] class extends Component
     #[Computed]
     public function progress(): HillProgress
     {
-        return new HillProgress(Auth::user(), $this->list, $this->scope);
+        return new HillProgress(Auth::user(), $this->list, $this->scope, $this->area);
     }
 
     /**
@@ -90,7 +99,9 @@ new #[Title('My hills')] class extends Component
 <div class="mx-auto w-full max-w-3xl space-y-6">
     <div>
         <flux:heading size="xl">{{ __('My hills') }}</flux:heading>
-        <flux:subheading>{{ config('dobih.lists')[$this->progress->list()] }}</flux:subheading>
+        <flux:subheading>
+            {{ config('dobih.lists')[$this->progress->list()] }}@if ($this->progress->area() !== ''), {{ \App\Support\AreaOptions::name($this->progress->area()) }}@endif
+        </flux:subheading>
     </div>
 
     @include('partials.hill-filters')
@@ -138,7 +149,7 @@ new #[Title('My hills')] class extends Component
     <div class="space-y-1">
         <div class="flex items-center justify-between gap-3">
             <flux:heading size="lg">{{ __('By region') }}</flux:heading>
-            <flux:link href="{{ route('my-hills.todo', ['list' => $this->progress->list(), 'scope' => $this->progress->scope()]) }}" wire:navigate>
+            <flux:link href="{{ route('my-hills.todo', ['list' => $this->progress->list(), 'scope' => $this->progress->scope(), 'area' => $this->progress->area()]) }}" wire:navigate>
                 {{ __('Hills still to do') }}
             </flux:link>
         </div>

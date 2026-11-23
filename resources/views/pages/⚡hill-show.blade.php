@@ -27,6 +27,7 @@ new class extends Component
         ->sortBy(fn ($group, $type) => array_search($type, array_keys($areaTypes), true));
     $maps = $hill->maps()->orderBy('type')->orderBy('ref')->get()->groupBy('type');
     $place = $hill->region ?? (config('dobih.countries')[$hill->country] ?? null);
+    $mwis = $hill->mwisArea();
 
     // The hill pages are public, so logging and ascents only appear for someone who can use them.
     $viewer = auth()->user();
@@ -125,6 +126,14 @@ new class extends Component
             <div>
                 <dt class="text-zinc-500">{{ __('Drop') }}</dt>
                 <dd class="font-medium">{{ number_format($hill->drop_m, 1) }}m</dd>
+            </div>
+        @endif
+        @if ($mwis)
+            <div class="col-span-2 sm:col-span-3">
+                <dt class="text-zinc-500">{{ __('MWIS area') }}</dt>
+                <dd class="font-medium">
+                    <a href="{{ $mwis['url'] }}" target="_blank" rel="noopener" class="underline" data-test="mwis-area">{{ $mwis['name'] }}</a>
+                </dd>
             </div>
         @endif
         @if ($hill->smc_section)

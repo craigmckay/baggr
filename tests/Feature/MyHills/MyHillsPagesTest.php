@@ -3,6 +3,7 @@
 namespace Tests\Feature\MyHills;
 
 use App\Actions\Walks\LogWalk;
+use App\Models\Area;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Models\HillClass;
@@ -245,6 +246,24 @@ class MyHillsPagesTest extends TestCase
             ->assertDontSee('Ben Number1<', false)
             ->call('showMore')
             ->assertSee('Ben Number1<', false);
+    }
+
+    public function test_my_hills_and_the_to_do_list_can_be_narrowed_to_an_area(): void
+    {
+        $me = User::factory()->create();
+        $ochil = Area::create(['code' => 'D002', 'short_name' => 'D002', 'name' => 'Ochil Hills', 'type' => 'region', 'country' => 'S']);
+        $this->munro(['name' => 'Ben Ochil'])->areas()->attach($ochil);
+        $this->munro(['name' => 'Ben Elsewhere']);
+
+        Livewire::actingAs($me)->withQueryParams(['area' => 'D002'])->test('pages::my-hills-todo')
+            ->assertSet('area', 'D002')
+            ->assertSee('Ben Ochil')
+            ->assertSee('Ochil Hills')
+            ->assertDontSee('Ben Elsewhere');
+
+        Livewire::actingAs($me)->withQueryParams(['area' => 'D002'])->test('pages::my-hills')
+            ->assertSee('0 / 1', false)
+            ->assertSee('Ochil Hills');
     }
 
     public function test_the_sidebar_links_to_my_hills(): void

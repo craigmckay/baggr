@@ -6,6 +6,8 @@
         @endforeach
     </flux:select>
 
+    @include('partials.area-select', ['model' => 'area'])
+
     <flux:select wire:model.live="scope" class="max-w-52" aria-label="{{ __('Which ascents') }}">
         <flux:select.option value="all">{{ __('All ascents') }}</flux:select.option>
         <flux:select.option value="solo">{{ __('Solo only') }}</flux:select.option>

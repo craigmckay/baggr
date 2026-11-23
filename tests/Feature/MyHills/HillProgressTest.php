@@ -4,6 +4,7 @@ namespace Tests\Feature\MyHills;
 
 use App\Actions\Walks\LogWalk;
 use App\Enums\HillGrouping;
+use App\Models\Area;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Models\HillClass;
@@ -178,7 +179,7 @@ class HillProgressTest extends TestCase
 
         $labels = array_column((new HillProgress($me, 'M'))->sections(HillGrouping::Mwis), 'label');
 
-        $this->assertSame(['West Highlands', 'Cairngorms NP and Monadhliath', 'Not mapped yet'], $labels);
+        $this->assertSame(['West Highlands', 'Cairngorms NP and Monadhliath', 'No MWIS area'], $labels);
     }
 
     public function test_smc_sections_are_numbered_and_in_numeric_order(): void
@@ -229,6 +230,34 @@ class HillProgressTest extends TestCase
         $this->assertSame(['name' => 'Munros', 'done' => 1, 'total' => 1], $summary['M']);
         $this->assertSame(['name' => 'Corbetts', 'done' => 1, 'total' => 2], $summary['C']);
         $this->assertSame(0, $summary['Ma']['total']);
+    }
+
+    public function test_an_area_narrows_the_list_and_the_totals(): void
+    {
+        $me = User::factory()->create();
+        $ochil = Area::create(['code' => 'D002', 'short_name' => 'D002', 'name' => 'Ochil Hills', 'type' => 'region', 'country' => 'S']);
+        $in = $this->munro();
+        $in->areas()->attach($ochil);
+        $this->munro();
+        $this->walk($me, [$in->id]);
+
+        $progress = new HillProgress($me, 'M', 'all', 'D002');
+
+        $this->assertSame('D002', $progress->area());
+        $this->assertSame(1, $progress->total());
+        $this->assertSame(1, $progress->doneCount());
+        $this->assertSame(['name' => 'Munros', 'done' => 1, 'total' => 1], $progress->summary()['M']);
+    }
+
+    public function test_an_area_that_does_not_exist_is_ignored(): void
+    {
+        $me = User::factory()->create();
+        $this->munro();
+
+        $progress = new HillProgress($me, 'M', 'all', 'D999');
+
+        $this->assertSame('', $progress->area());
+        $this->assertSame(1, $progress->total());
     }
 
     public function test_a_person_with_no_ascents_has_nothing_done(): void
