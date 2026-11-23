@@ -25,13 +25,13 @@ new #[Title('My hills')] class extends Component
     #[Url]
     public string $area = '';
 
-    /** The kind of area being picked (region, murray_section...); it only narrows the area picker. */
-    public string $areaType = '';
+    /** The area category being picked (hill_range, murray_section...); it only narrows the area picker. */
+    public string $areaCategory = '';
 
-    /** How regions are grouped; remembered on the person. */
+    /** How hills are put into sections; remembered on the person. */
     public string $grouping = 'mwis';
 
-    /** Regions whose hills are shown. Only these are drawn, so a long list stays quick. */
+    /** Sections whose hills are shown. Only these are drawn, so a long list stays quick. */
     public array $open = [];
 
     public function toggle(string $key): void
@@ -57,7 +57,7 @@ new #[Title('My hills')] class extends Component
     }
 
     /** Choosing another kind of area drops the area picked from the last one. */
-    public function updatedAreaType(): void
+    public function updatedAreaCategory(): void
     {
         $this->area = '';
         $this->open = [];
@@ -65,7 +65,7 @@ new #[Title('My hills')] class extends Component
 
     public function mount(): void
     {
-        $this->areaType = AreaOptions::typeOf($this->area);
+        $this->areaCategory = AreaOptions::categoryOf($this->area);
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
     }
 
@@ -160,7 +160,7 @@ new #[Title('My hills')] class extends Component
 
     <div class="space-y-1">
         <div class="flex items-center justify-between gap-3">
-            <flux:heading size="lg">{{ __('By region') }}</flux:heading>
+            <flux:heading size="lg">{{ __('By :grouping', ['grouping' => (HillGrouping::tryFrom($this->grouping) ?? HillGrouping::Mwis)->label()]) }}</flux:heading>
             <flux:link href="{{ route('my-hills.todo', ['list' => $this->progress->list(), 'scope' => $this->progress->scope(), 'area' => $this->progress->area()]) }}" wire:navigate>
                 {{ __('Hills still to do') }}
             </flux:link>

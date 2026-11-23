@@ -4,6 +4,8 @@ use App\Enums\HillGrouping;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Support\AreaOptions;
+use App\Support\HillLists;
+use App\Support\MwisAreas;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -18,7 +20,7 @@ new #[Title('Hills')] class extends Component
 {
     use WithPagination;
 
-    private const SORTABLE = ['name', 'height_m', 'region'];
+    private const SORTABLE = ['name', 'height_m', 'list'];
 
     #[Url]
     public string $search = '';
@@ -31,8 +33,8 @@ new #[Title('Hills')] class extends Component
     #[Url]
     public string $area = '';
 
-    /** The kind of area being picked (region, murray_section...); it only narrows the area picker. */
-    public string $areaType = '';
+    /** The area category being picked (hill_range, murray_section...); it only narrows the area picker. */
+    public string $areaCategory = '';
 
     /** "mwis", "smc" or "rhb" to show the hills in sections, or empty for one plain list. */
     #[Url]
@@ -63,11 +65,11 @@ new #[Title('Hills')] class extends Component
     public function mount(): void
     {
         $this->paginators['page'] = Paginator::resolveCurrentPage('page');
-        $this->areaType = AreaOptions::typeOf($this->area);
+        $this->areaCategory = AreaOptions::categoryOf($this->area);
     }
 
     /** Choosing another kind of area drops the area picked from the last one. */
-    public function updatedAreaType(): void
+    public function updatedAreaCategory(): void
     {
         $this->area = '';
     }
@@ -98,7 +100,7 @@ new #[Title('Hills')] class extends Component
 
     public function clearFilters(): void
     {
-        $this->reset('area', 'areaType', 'status', 'minHeight', 'maxHeight', 'search');
+        $this->reset('area', 'areaCategory', 'status', 'minHeight', 'maxHeight', 'search');
         $this->resetPage();
     }
 
@@ -162,17 +164,22 @@ new #[Title('Hills')] class extends Component
             ->when(array_key_exists($this->list, config('dobih.lists')), fn ($query) => $query
                 ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list)))
             ->when(trim($this->search) !== '', fn ($query) => $this->applySearch($query))
+            ->with(['classes' => fn ($classes) => $classes->whereIn('hill_classes.code', HillLists::codes())])
             ->when($grouping !== null, fn ($query) => $query->orderByRaw($grouping->orderSql()))
-            ->orderBy($sortBy, $direction)
+            ->when(
+                $sortBy === 'list',
+                fn ($query) => $query->orderByRaw(HillLists::rankSql().' '.$direction)->orderBy('name'),
+                fn ($query) => $query->orderBy($sortBy, $direction),
+            )
             ->orderBy('id')
             ->paginate(50);
     }
 
     /**
-     * Matches the start of a word in a hill's name, other names or region, so
-     * "Dum" finds Dumyat and not every hill with "dum" in the middle of a word.
-     * Area names are searched too, but only once there are four letters to go
-     * on: "Dum" would otherwise bring in every hill in Dumfries and Galloway.
+     * Matches the start of a word in a hill's name or other names, so "Dum" finds
+     * Dumyat and not every hill with "dum" in the middle of a word. Area names
+     * (DoBIH's and MWIS's) are searched too, but only once there are four letters
+     * to go on: "Dum" would otherwise bring in every hill in Dumfries and Galloway.
      *
      * @param  Illuminate\Database\Eloquent\Builder<Hill>  $query
      */
@@ -183,11 +190,20 @@ new #[Title('Hills')] class extends Component
 
         $query->where(function ($match) use ($term, $wordStart) {
             $match->where($wordStart('name'))
-                ->orWhere($wordStart('region'))
                 ->orWhereHas('alternateNames', fn ($names) => $names->where($wordStart('name')));
 
             if (mb_strlen($term) >= 4) {
                 $match->orWhereHas('areas', fn ($areas) => $areas->where($wordStart('areas.name')));
+
+                $needle = mb_strtolower($term);
+                $mwis = collect(MwisAreas::all())
+                    ->filter(fn (array $area) => str_starts_with(mb_strtolower($area['name']), $needle) || str_contains(mb_strtolower($area['name']), " {$needle}"))
+                    ->keys()
+                    ->all();
+
+                if ($mwis !== []) {
+                    $match->orWhereIn('mwis_area', $mwis);
+                }
             }
         });
     }
@@ -248,7 +264,7 @@ new #[Title('Hills')] class extends Component
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-        <flux:select wire:model.live="groupBy" class="max-w-56" aria-label="{{ __('Group by') }}">
+        <flux:select wire:model.live="groupBy" class="max-w-72" aria-label="{{ __('Group by') }}">
             <flux:select.option value="">{{ __('Not grouped') }}</flux:select.option>
             @foreach (\App\Enums\HillGrouping::cases() as $option)
                 <flux:select.option value="{{ $option->value }}">{{ __('Group by :name', ['name' => $option->label()]) }}</flux:select.option>
@@ -279,15 +295,15 @@ new #[Title('Hills')] class extends Component
 
     <flux:table class="w-full">
         <flux:table.columns>
-            <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')" class="w-[45%] !whitespace-normal sm:w-auto">
+            <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')" class="w-[40%] !whitespace-normal sm:w-auto">
                 {{ __('Name') }}
             </flux:table.column>
-            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[25%] sm:w-auto">
+            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[20%] sm:w-auto">
                 {{ __('Height (m)') }}
             </flux:table.column>
-            <flux:table.column class="w-[15%] sm:w-auto">{{ __('MWIS') }}</flux:table.column>
-            <flux:table.column sortable :sorted="$sortBy === 'region'" :direction="$sortDirection" wire:click="sort('region')" class="hidden w-[20%] sm:table-cell sm:w-auto">
-                {{ __('Region') }}
+            <flux:table.column class="w-[20%] sm:w-auto">{{ __('MWIS') }}</flux:table.column>
+            <flux:table.column sortable :sorted="$sortBy === 'list'" :direction="$sortDirection" wire:click="sort('list')" class="w-[20%] sm:w-auto">
+                {{ __('List') }}
             </flux:table.column>
         </flux:table.columns>
 
@@ -325,7 +341,12 @@ new #[Title('Hills')] class extends Component
                             >{{ $mwis['code'] }}</a>
                         @endif
                     </flux:table.cell>
-                    <flux:table.cell class="hidden sm:table-cell">{{ $hill->region ?? config('dobih.countries')[$hill->country] ?? '' }}</flux:table.cell>
+                    <flux:table.cell>
+                        @if ($main = $hill->mainList())
+                            <span class="sm:hidden" title="{{ $main['name'] }}">{{ $main['code'] }}</span>
+                            <span class="hidden sm:inline">{{ $main['name'] }}</span>
+                        @endif
+                    </flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>

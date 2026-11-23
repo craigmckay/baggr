@@ -80,7 +80,7 @@ class HillProgress
     public function hills(): Collection
     {
         return $this->hills ??= Hill::query()
-            ->select(['id', 'name', 'slug', 'height_m', 'region', 'mwis_forecast_url', 'mwis_area', 'dobih_section', 'smc_section', 'smc_section_description', 'rhb_section', 'rhb_section_description'])
+            ->select(['id', 'name', 'slug', 'height_m', 'mwis_forecast_url', 'mwis_area', 'dobih_section'])
             ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list))
             ->when($this->area !== '', fn ($query) => $query->whereHas('areas', fn ($areas) => $areas->where('areas.code', $this->area)))
             ->orderByDesc('height_m')

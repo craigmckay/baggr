@@ -22,7 +22,7 @@ class ImportDobih extends Command
     private const AREA_TYPES = [
         'A' => 'historic_county',
         'C' => 'county',
-        'D' => 'region',
+        'D' => 'hill_range',
         'I' => 'island',
         'L' => 'london_borough',
         'M' => 'murray_section',

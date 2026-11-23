@@ -26,7 +26,9 @@ new class extends Component
         ->groupBy('type')
         ->sortBy(fn ($group, $type) => array_search($type, array_keys($areaTypes), true));
     $maps = $hill->maps()->orderBy('type')->orderBy('ref')->get()->groupBy('type');
-    $place = $hill->region ?? (config('dobih.countries')[$hill->country] ?? null);
+    $place = config('dobih.countries')[$hill->country] ?? null;
+    // The sub-section is one of the hill's areas, listed below; the section above it is worked out here.
+    $murraySection = \App\Enums\HillGrouping::MurraySection->sectionFor($hill);
     $mwis = $hill->mwisArea();
 
     // The hill pages are public, so logging and ascents only appear for someone who can use them.
@@ -136,16 +138,10 @@ new class extends Component
                 </dd>
             </div>
         @endif
-        @if ($hill->smc_section)
-            <div>
-                <dt class="text-zinc-500">{{ __('SMC section') }}</dt>
-                <dd class="font-medium">{{ $hill->smc_section }} &ndash; {{ $hill->smc_section_description }}</dd>
-            </div>
-        @endif
-        @if ($hill->rhb_section)
+        @if ($murraySection['key'] !== 'none')
             <div class="col-span-2 sm:col-span-3">
-                <dt class="text-zinc-500">{{ __('RHB region classification') }}</dt>
-                <dd class="font-medium">{{ $hill->rhb_section }} &ndash; {{ $hill->rhb_section_description }}</dd>
+                <dt class="text-zinc-500">{{ __('Murray section') }}</dt>
+                <dd class="font-medium">{{ $murraySection['label'] }}</dd>
             </div>
         @endif
         @if ($lists->isNotEmpty())

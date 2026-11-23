@@ -26,7 +26,7 @@ class HillListFiltersTest extends TestCase
         return $hill;
     }
 
-    private function inArea(Hill $hill, string $code, string $name, string $type = 'region'): void
+    private function inArea(Hill $hill, string $code, string $name, string $type = 'hill_range'): void
     {
         $hill->areas()->attach(Area::firstOrCreate(['code' => $code], ['name' => $name, 'short_name' => $code, 'type' => $type, 'country' => 'S']));
     }
@@ -68,17 +68,17 @@ class HillListFiltersTest extends TestCase
         $this->inArea($this->hill('Ben Lomond'), 'M01C', '01C: Loch Lomond to Strathyre', 'murray_section');
 
         $this->get(route('hills.index'))
-            ->assertSee('>Region</option>', false)
-            ->assertSee('>Murray section</option>', false)
+            ->assertSee('>Hill range</option>', false)
+            ->assertSee('>Murray sub-section</option>', false)
             ->assertDontSee('Ochil Hills (1)', false);
 
         Livewire::test('pages::hills')
-            ->set('areaType', 'region')
+            ->set('areaCategory', 'hill_range')
             ->assertSee('Ochil Hills (1)')
-            ->assertSee('Region: any')
+            ->assertSee('Hill range: any')
             ->assertDontSee('Loch Lomond to Strathyre')
             ->set('area', 'D002')
-            ->set('areaType', 'murray_section')
+            ->set('areaCategory', 'murray_section')
             ->assertSet('area', '')
             ->assertSee('01C: Loch Lomond to Strathyre (1)');
     }
@@ -88,7 +88,7 @@ class HillListFiltersTest extends TestCase
         $this->inArea($this->hill('Ben Cleuch'), 'D002', 'Ochil Hills');
 
         Livewire::withQueryParams(['area' => 'D002'])->test('pages::hills')
-            ->assertSet('areaType', 'region')
+            ->assertSet('areaCategory', 'hill_range')
             ->assertSee('Ochil Hills (1)');
     }
 
@@ -140,34 +140,34 @@ class HillListFiltersTest extends TestCase
             ->assertSeeInOrder(['Northwest Highlands', 'Ben A North', 'West Highlands', 'Ben Z West', 'No MWIS area', 'Ben Nowhere']);
     }
 
-    public function test_grouping_by_smc_section_works_for_hills_that_are_not_munros(): void
+    public function test_grouping_by_murray_section_works_for_hills_that_are_not_munros(): void
     {
-        $this->hill('Wee Marilyn', ['dobih_section' => '26.1', 'smc_section' => null, 'rhb_section' => null], 'Ma');
+        $this->hill('Wee Marilyn', ['dobih_section' => '26.1'], 'Ma');
         Area::create(['code' => 'M26', 'short_name' => 'M26', 'name' => '26: Central Scotland from Dumbarton to Montrose', 'type' => 'murray_section', 'country' => 'S']);
         Area::create(['code' => 'M26A', 'short_name' => 'M26A', 'name' => '26A: Central Scotland from Dumbarton to Montrose', 'type' => 'murray_section', 'country' => 'S']);
 
-        $smc = HillGrouping::Smc->sectionFor(Hill::firstWhere('name', 'Wee Marilyn'));
-        $rhb = HillGrouping::Rhb->sectionFor(Hill::firstWhere('name', 'Wee Marilyn'));
+        $section = HillGrouping::MurraySection->sectionFor(Hill::firstWhere('name', 'Wee Marilyn'));
+        $subsection = HillGrouping::MurraySubsection->sectionFor(Hill::firstWhere('name', 'Wee Marilyn'));
 
-        $this->assertSame('26. Central Scotland from Dumbarton to Montrose', $smc['label']);
-        $this->assertSame('26A. Central Scotland from Dumbarton to Montrose', $rhb['label']);
+        $this->assertSame('26. Central Scotland from Dumbarton to Montrose', $section['label']);
+        $this->assertSame('26A. Central Scotland from Dumbarton to Montrose', $subsection['label']);
     }
 
     public function test_a_hill_with_no_section_is_not_mapped_yet(): void
     {
-        $hill = $this->hill('Mystery', ['dobih_section' => null, 'smc_section' => null, 'rhb_section' => null]);
+        $hill = $this->hill('Mystery', ['dobih_section' => null]);
 
-        $this->assertSame('Not mapped yet', HillGrouping::Smc->sectionFor($hill)['label']);
-        $this->assertSame('Not mapped yet', HillGrouping::Rhb->sectionFor($hill)['label']);
+        $this->assertSame('Not mapped yet', HillGrouping::MurraySection->sectionFor($hill)['label']);
+        $this->assertSame('Not mapped yet', HillGrouping::MurraySubsection->sectionFor($hill)['label']);
     }
 
-    public function test_sections_are_listed_in_order_when_grouped_by_smc(): void
+    public function test_sections_are_listed_in_order_when_grouped_by_murray_section(): void
     {
         $this->hill('Ben Ten', ['dobih_section' => '10.1']);
         $this->hill('Ben Two', ['dobih_section' => '2.1']);
 
         Livewire::test('pages::hills')
-            ->set('groupBy', 'smc')
+            ->set('groupBy', 'murray')
             ->assertSeeInOrder(['Ben Two', 'Ben Ten']);
     }
 
@@ -175,9 +175,9 @@ class HillListFiltersTest extends TestCase
     {
         $me = User::factory()->create();
 
-        Livewire::actingAs($me)->test('pages::hills')->set('groupBy', 'rhb');
+        Livewire::actingAs($me)->test('pages::hills')->set('groupBy', 'murray-sub');
 
-        $this->assertSame('rhb', $me->fresh()->hill_grouping);
+        $this->assertSame('murray-sub', $me->fresh()->hill_grouping);
     }
 
     public function test_a_made_up_grouping_is_dropped(): void
@@ -313,6 +313,61 @@ class HillListFiltersTest extends TestCase
             ->call('setPage', 2)
             ->set('minHeight', '900')
             ->assertSet('paginators.page', 1);
+    }
+
+    public function test_the_list_column_shows_the_most_significant_list_the_hill_is_on(): void
+    {
+        foreach (['Ma' => 'Marilyn', 'MT' => 'Munro Top', 'G' => 'Graham'] as $code => $name) {
+            HillClass::create(['code' => $code, 'name' => $name, 'show_in_list' => true, 'sort_order' => 1]);
+        }
+        $both = $this->hill('Ben Both', [], 'Ma');
+        $both->classes()->attach(HillClass::where('code', 'MT')->first());
+        $this->hill('Ben Graham', [], 'G');
+        $this->hill('Ben Plain', [], 'Other');
+
+        Livewire::test('pages::hills')
+            ->set('list', 'all')
+            ->assertSeeHtml('hidden sm:inline">Munro Top</span>')
+            ->assertSeeHtml('hidden sm:inline">Graham</span>')
+            ->assertSeeHtml('<span class="sm:hidden" title="Munro Top">MT</span>')
+            ->assertDontSeeHtml('>Marilyn</span>');
+    }
+
+    public function test_the_list_column_sorts_by_significance(): void
+    {
+        $this->hill('Ben Marilyn', [], 'Ma');
+        $this->hill('Ben Munro', [], 'M');
+        $this->hill('Ben Corbett', [], 'C');
+
+        Livewire::test('pages::hills')
+            ->set('list', 'all')
+            ->call('sort', 'list')
+            ->assertSeeInOrder(['Ben Munro', 'Ben Corbett', 'Ben Marilyn'])
+            ->call('sort', 'list')
+            ->assertSeeInOrder(['Ben Marilyn', 'Ben Corbett', 'Ben Munro']);
+    }
+
+    public function test_search_finds_hills_by_the_name_of_their_mwis_area(): void
+    {
+        $this->hill('Ben Macdui', ['mwis_area' => 'EH']);
+        $this->hill('Ben Cleuch', ['mwis_area' => 'SH']);
+
+        Livewire::test('pages::hills')
+            ->set('search', 'Cairng')
+            ->assertSee('Ben Macdui')
+            ->assertDontSee('Ben Cleuch')
+            ->set('search', 'Cai')
+            ->assertDontSee('Ben Macdui');
+    }
+
+    public function test_the_hill_page_shows_the_murray_section(): void
+    {
+        Area::create(['code' => 'M22', 'short_name' => 'M22', 'name' => '22: Shetland Islands', 'type' => 'murray_section', 'country' => 'S']);
+        $hill = $this->hill('Ronas Hill', ['dobih_section' => '22']);
+
+        $this->get(route('hills.show', $hill))
+            ->assertSee('22. Shetland Islands')
+            ->assertDontSee('Murray sub-section');
     }
 
     public function test_the_hill_page_shows_the_mwis_area_as_a_link(): void

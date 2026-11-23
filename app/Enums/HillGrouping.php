@@ -9,31 +9,31 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
- * The three ways hills are grouped into regions (spec §3).
+ * The three ways hills are put into sections (spec §3).
  *
- * MWIS is the hill's forecast area. SMC and RHB are the Murray section and
- * sub-section DoBIH gives every hill (for example 4 and 04B). The Munros' own
- * stored values win where they exist, and they are the same thing.
+ * A hill's MWIS area is the forecast area it falls in. Its Murray section and
+ * sub-section (for example 4 and 04B) are worked out from DoBIH's section for
+ * the hill ("4.2" is section 4, sub-section B), which every hill has.
  */
 enum HillGrouping: string
 {
     case Mwis = 'mwis';
-    case Smc = 'smc';
-    case Rhb = 'rhb';
+    case MurraySection = 'murray';
+    case MurraySubsection = 'murray-sub';
 
     public function label(): string
     {
         return match ($this) {
             self::Mwis => __('MWIS area'),
-            self::Smc => __('SMC section'),
-            self::Rhb => __('RHB section'),
+            self::MurraySection => __('Murray section'),
+            self::MurraySubsection => __('Murray sub-section'),
         };
     }
 
     /**
      * Where a hill falls in this grouping. Hills with nothing to go on (Ireland,
-     * the Northern and Western Isles and so on, for MWIS) go under "No area" or
-     * "Not mapped yet", which always comes last.
+     * the Northern and Western Isles and so on, for MWIS) go under "No MWIS area"
+     * or "Not mapped yet", which always comes last.
      *
      * @return array{key: string, label: string, sort: string}
      */
@@ -41,8 +41,8 @@ enum HillGrouping: string
     {
         $section = match ($this) {
             self::Mwis => $this->mwisSection($hill),
-            self::Smc => $this->smcSection($hill),
-            self::Rhb => $this->rhbSection($hill),
+            self::MurraySection => $this->murraySection($hill),
+            self::MurraySubsection => $this->murraySubsection($hill),
         };
 
         return $section ?? [
@@ -63,7 +63,7 @@ enum HillGrouping: string
                 ->map(fn (array $area) => "when hills.mwis_area = '{$area['code']}' then {$area['order']}")
                 ->implode(' ').' else 99 end',
             // "4.2" is section 4, sub-section B. Sub-sections run A to F, so one decimal place sorts them.
-            self::Smc, self::Rhb => 'cast(hills.dobih_section as decimal(6, 2))',
+            self::MurraySection, self::MurraySubsection => 'cast(hills.dobih_section as decimal(6, 2))',
         };
     }
 
@@ -88,33 +88,23 @@ enum HillGrouping: string
     /**
      * @return array{key: string, label: string, sort: string}|null
      */
-    private function smcSection(Hill $hill): ?array
+    private function murraySection(Hill $hill): ?array
     {
-        if (trim((string) $hill->smc_section) !== '') {
-            return $this->numberedSection($hill->smc_section, $hill->smc_section_description, pad: true);
-        }
-
-        $top = $this->sectionNumbers($hill)['top'] ?? null;
+        $top = self::sectionNumbers($hill->dobih_section)['top'] ?? null;
 
         if ($top === null) {
             return null;
         }
 
-        $code = sprintf('M%02d', $top);
-
-        return $this->numberedSection($top, $this->sectionName($code), pad: true);
+        return $this->numberedSection((string) $top, self::sectionName(sprintf('M%02d', $top)), pad: true);
     }
 
     /**
      * @return array{key: string, label: string, sort: string}|null
      */
-    private function rhbSection(Hill $hill): ?array
+    private function murraySubsection(Hill $hill): ?array
     {
-        if (trim((string) $hill->rhb_section) !== '') {
-            return $this->numberedSection($hill->rhb_section, $hill->rhb_section_description, pad: false);
-        }
-
-        $numbers = $this->sectionNumbers($hill);
+        $numbers = self::sectionNumbers($hill->dobih_section);
 
         if ($numbers === null) {
             return null;
@@ -122,17 +112,17 @@ enum HillGrouping: string
 
         $number = sprintf('%02d', $numbers['top']).$numbers['letter'];
 
-        return $this->numberedSection($number, $this->sectionName('M'.$number), pad: false);
+        return $this->numberedSection($number, self::sectionName('M'.$number), pad: false);
     }
 
     /**
-     * Reads DoBIH's "4.2" (section 4, sub-section B) from the hill.
+     * Reads DoBIH's "4.2" (section 4, sub-section B) for a hill.
      *
      * @return array{top: int, letter: string}|null
      */
-    private function sectionNumbers(Hill $hill): ?array
+    public static function sectionNumbers(?string $dobihSection): ?array
     {
-        $section = trim((string) $hill->dobih_section);
+        $section = trim((string) $dobihSection);
 
         if ($section === '' || ! preg_match('/^(\d+)(?:\.(\d+))?$/', $section, $match)) {
             return null;
@@ -144,7 +134,7 @@ enum HillGrouping: string
     }
 
     /** The text after the colon in "04B: Loch Treig to Loch Ericht". */
-    private function sectionName(string $code): ?string
+    private static function sectionName(string $code): ?string
     {
         // Read once per request (the array store lives only as long as the app does).
         $names = Cache::store('array')->rememberForever(
@@ -158,16 +148,10 @@ enum HillGrouping: string
     }
 
     /**
-     * @return array{key: string, label: string, sort: string}|null
+     * @return array{key: string, label: string, sort: string}
      */
-    private function numberedSection(mixed $number, ?string $description, bool $pad): ?array
+    private function numberedSection(string $number, ?string $description, bool $pad): array
     {
-        $number = trim((string) $number);
-
-        if ($number === '') {
-            return null;
-        }
-
         return [
             'key' => $this->value.'-'.$number,
             'label' => trim($number.'. '.$description),

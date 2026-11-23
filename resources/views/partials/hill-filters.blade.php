@@ -1,4 +1,4 @@
-{{-- Shared by My hills and Hills still to do: list, which ascents count, and how regions are grouped. --}}
+{{-- Shared by My hills and Hills still to do: list, which ascents count, and how hills are put into sections. --}}
 <div class="flex flex-wrap items-center gap-3">
     <flux:select wire:model.live="list" class="max-w-44" aria-label="{{ __('Hill list') }}">
         @foreach (config('dobih.lists') as $code => $name)
@@ -16,7 +16,7 @@
         @endforeach
     </flux:select>
 
-    <flux:select wire:model.live="grouping" class="max-w-44" aria-label="{{ __('Group regions by') }}">
+    <flux:select wire:model.live="grouping" class="max-w-56" aria-label="{{ __('Group sections by') }}">
         @foreach (\App\Enums\HillGrouping::cases() as $option)
             <flux:select.option value="{{ $option->value }}">{{ $option->label() }}</flux:select.option>
         @endforeach

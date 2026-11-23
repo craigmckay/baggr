@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\HillLists;
 use App\Support\MwisAreas;
 use Database\Factories\HillFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,17 +20,12 @@ class Hill extends Model
         'slug',
         'dobih_number',
         'height_m',
-        'region',
         'walkhighlands_url',
         'mwis_forecast_url',
         'mwis_area',
         'grid_ref',
         'latitude',
         'longitude',
-        'smc_section',
-        'smc_section_description',
-        'rhb_section',
-        'rhb_section_description',
         'photo_url',
         'photo_page_url',
         'photo_title',
@@ -65,6 +61,17 @@ class Hill extends Model
     public function mwisArea(): ?array
     {
         return MwisAreas::find($this->mwis_area) ?? MwisAreas::fromUrl($this->mwis_forecast_url);
+    }
+
+    /**
+     * The most significant of the nine lists the hill is on (Munro, then Munro Top and
+     * so on), or null if it is on none. Load `classes` first when listing many hills.
+     *
+     * @return array{code: string, name: string}|null
+     */
+    public function mainList(): ?array
+    {
+        return HillLists::mainFor($this);
     }
 
     /**
