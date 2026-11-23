@@ -62,13 +62,61 @@ class HillListFiltersTest extends TestCase
         $this->assertNotNull($elsewhere->id);
     }
 
-    public function test_the_area_picker_lists_areas_by_type_with_their_hill_counts(): void
+    public function test_the_kind_of_area_is_chosen_before_the_area(): void
+    {
+        $this->inArea($this->hill('Ben Cleuch'), 'D002', 'Ochil Hills');
+        $this->inArea($this->hill('Ben Lomond'), 'M01C', '01C: Loch Lomond to Strathyre', 'murray_section');
+
+        $this->get(route('hills.index'))
+            ->assertSee('>Region</option>', false)
+            ->assertSee('>Murray section</option>', false)
+            ->assertDontSee('Ochil Hills (1)', false);
+
+        Livewire::test('pages::hills')
+            ->set('areaType', 'region')
+            ->assertSee('Ochil Hills (1)')
+            ->assertSee('Region: any')
+            ->assertDontSee('Loch Lomond to Strathyre')
+            ->set('area', 'D002')
+            ->set('areaType', 'murray_section')
+            ->assertSet('area', '')
+            ->assertSee('01C: Loch Lomond to Strathyre (1)');
+    }
+
+    public function test_an_area_in_the_address_opens_with_its_kind_chosen(): void
     {
         $this->inArea($this->hill('Ben Cleuch'), 'D002', 'Ochil Hills');
 
-        $this->get(route('hills.index'))
-            ->assertSee('Ochil Hills (1)')
-            ->assertSee('Region');
+        Livewire::withQueryParams(['area' => 'D002'])->test('pages::hills')
+            ->assertSet('areaType', 'region')
+            ->assertSee('Ochil Hills (1)');
+    }
+
+    public function test_search_matches_the_start_of_a_word_not_the_middle(): void
+    {
+        $this->hill('Dumyat');
+        $this->hill('Ben Dum Fell');
+        $this->hill('Meldum Hill');
+
+        Livewire::test('pages::hills')
+            ->set('search', 'Dum')
+            ->assertSee('Dumyat')
+            ->assertSee('Ben Dum Fell')
+            ->assertDontSee('Meldum Hill');
+    }
+
+    public function test_a_short_search_does_not_bring_in_whole_areas(): void
+    {
+        $this->inArea($this->hill('Ben Nowhere'), 'A005', 'Dumfries and Galloway', 'authority');
+        $this->hill('Dumyat');
+
+        Livewire::test('pages::hills')
+            ->set('search', 'Dum')
+            ->assertSee('Dumyat')
+            ->assertDontSee('Ben Nowhere')
+            ->set('search', 'Dumf')
+            ->assertSee('Ben Nowhere')
+            ->assertDontSee('Dumyat');
     }
 
     public function test_every_hill_shows_its_mwis_area_as_a_link_to_the_forecast(): void

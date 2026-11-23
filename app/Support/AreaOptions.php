@@ -6,17 +6,21 @@ use App\Models\Area;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * The DoBIH areas a person can pick to narrow a hill list (spec §3), grouped by
- * type and with the number of hills in each. Areas with no hills are left out.
+ * The DoBIH areas a person can pick to narrow a hill list (spec §3). A person
+ * picks the kind of area first (region, Murray section, council area...) and
+ * then one of that kind, so the lists are grouped by type, each area with the
+ * number of hills in it. Areas with no hills are left out.
  */
 class AreaOptions
 {
+    public const CACHE_KEY = 'area-options.v2';
+
     /**
-     * @return array<string, list<array{code: string, name: string, count: int}>> Type label => areas
+     * @return array<string, array{label: string, areas: list<array{code: string, name: string, count: int}>}> Type => its label and areas
      */
     public static function grouped(): array
     {
-        return Cache::remember('area-options', now()->addHour(), function () {
+        return Cache::remember(self::CACHE_KEY, now()->addHour(), function () {
             $areas = Area::query()
                 ->join('area_hill', 'area_hill.area_id', '=', 'areas.id')
                 ->groupBy('areas.id', 'areas.code', 'areas.name', 'areas.type')
@@ -34,7 +38,8 @@ class AreaOptions
 
             foreach (config('dobih.area_types') as $type => $label) {
                 foreach ($areas[$type] ?? [] as $area) {
-                    $grouped[$label][] = [
+                    $grouped[$type]['label'] = $label;
+                    $grouped[$type]['areas'][] = [
                         'code' => $area->code,
                         'name' => $area->name,
                         'count' => (int) ($counts[$area->code] ?? 0),
@@ -50,5 +55,11 @@ class AreaOptions
     public static function name(string $code): ?string
     {
         return $code === '' ? null : Area::query()->where('code', $code)->value('name');
+    }
+
+    /** The kind of area a code is ("region", "murray_section"...), or an empty string if it isn't one. */
+    public static function typeOf(string $code): string
+    {
+        return $code === '' ? '' : (string) Area::query()->where('code', $code)->value('type');
     }
 }

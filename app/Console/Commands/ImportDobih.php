@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\AreaOptions;
 use App\Support\MwisAreaMapper;
 use Generator;
 use Illuminate\Console\Attributes\Description;
@@ -71,7 +72,7 @@ class ImportDobih extends Command
 
         // The areas were rebuilt, so work out each hill's MWIS area again and refresh the area picker.
         $mapped = app(MwisAreaMapper::class)->run();
-        Cache::forget('area-options');
+        Cache::forget(AreaOptions::CACHE_KEY);
         $this->line(sprintf('%-16s %s', 'mwis areas', number_format($mapped['mapped'])));
 
         $this->info('DoBIH import finished. Version in config/dobih.php is '.config('dobih.version').'.');

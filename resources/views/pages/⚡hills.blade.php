@@ -31,6 +31,9 @@ new #[Title('Hills')] class extends Component
     #[Url]
     public string $area = '';
 
+    /** The kind of area being picked (region, murray_section...); it only narrows the area picker. */
+    public string $areaType = '';
+
     /** "mwis", "smc" or "rhb" to show the hills in sections, or empty for one plain list. */
     #[Url]
     public string $groupBy = '';
@@ -60,6 +63,13 @@ new #[Title('Hills')] class extends Component
     public function mount(): void
     {
         $this->paginators['page'] = Paginator::resolveCurrentPage('page');
+        $this->areaType = AreaOptions::typeOf($this->area);
+    }
+
+    /** Choosing another kind of area drops the area picked from the last one. */
+    public function updatedAreaType(): void
+    {
+        $this->area = '';
     }
 
     /** Any filter changing starts again from the first page. */
@@ -88,7 +98,7 @@ new #[Title('Hills')] class extends Component
 
     public function clearFilters(): void
     {
-        $this->reset('area', 'status', 'minHeight', 'maxHeight', 'search');
+        $this->reset('area', 'areaType', 'status', 'minHeight', 'maxHeight', 'search');
         $this->resetPage();
     }
 
@@ -151,19 +161,35 @@ new #[Title('Hills')] class extends Component
             ->tap(fn ($query) => $this->applyDoneFilter($query))
             ->when(array_key_exists($this->list, config('dobih.lists')), fn ($query) => $query
                 ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list)))
-            ->when($this->search !== '', function ($query) {
-                $term = "%{$this->search}%";
-
-                $query->where(fn ($match) => $match
-                    ->where('name', 'like', $term)
-                    ->orWhere('region', 'like', $term)
-                    ->orWhereHas('alternateNames', fn ($names) => $names->where('name', 'like', $term))
-                    ->orWhereHas('areas', fn ($areas) => $areas->where('areas.name', 'like', $term)));
-            })
+            ->when(trim($this->search) !== '', fn ($query) => $this->applySearch($query))
             ->when($grouping !== null, fn ($query) => $query->orderByRaw($grouping->orderSql()))
             ->orderBy($sortBy, $direction)
             ->orderBy('id')
             ->paginate(50);
+    }
+
+    /**
+     * Matches the start of a word in a hill's name, other names or region, so
+     * "Dum" finds Dumyat and not every hill with "dum" in the middle of a word.
+     * Area names are searched too, but only once there are four letters to go
+     * on: "Dum" would otherwise bring in every hill in Dumfries and Galloway.
+     *
+     * @param  Illuminate\Database\Eloquent\Builder<Hill>  $query
+     */
+    private function applySearch($query): void
+    {
+        $term = trim($this->search);
+        $wordStart = fn ($column) => fn ($match) => $match->where($column, 'like', "{$term}%")->orWhere($column, 'like', "% {$term}%");
+
+        $query->where(function ($match) use ($term, $wordStart) {
+            $match->where($wordStart('name'))
+                ->orWhere($wordStart('region'))
+                ->orWhereHas('alternateNames', fn ($names) => $names->where($wordStart('name')));
+
+            if (mb_strlen($term) >= 4) {
+                $match->orWhereHas('areas', fn ($areas) => $areas->where($wordStart('areas.name')));
+            }
+        });
     }
 
     /**
@@ -276,7 +302,7 @@ new #[Title('Hills')] class extends Component
                     @if ($section['key'] !== $currentSection)
                         @php($currentSection = $section['key'])
                         <flux:table.row :key="'section-'.$section['key'].'-'.$hill->id">
-                            <flux:table.cell colspan="4" class="!bg-zinc-50 text-sm font-semibold dark:!bg-zinc-800">{{ $section['label'] }}</flux:table.cell>
+                            <flux:table.cell colspan="4" class="!bg-hill/10 text-sm font-semibold !text-hill dark:!bg-heather/15 dark:!text-heather">{{ $section['label'] }}</flux:table.cell>
                         </flux:table.row>
                     @endif
                 @endif
@@ -285,7 +311,7 @@ new #[Title('Hills')] class extends Component
                     x-on:click="Livewire.navigate('{{ route('hills.show', $hill) }}')"
                     class="cursor-pointer"
                 >
-                    <flux:table.cell class="!whitespace-normal font-medium">{{ $hill->name }}</flux:table.cell>
+                    <flux:table.cell class="!whitespace-normal font-medium {{ $grouping ? 'ps-8' : '' }}">{{ $hill->name }}</flux:table.cell>
                     <flux:table.cell>{{ $hill->height_m }}</flux:table.cell>
                     <flux:table.cell>
                         @if ($mwis = $hill->mwisArea())

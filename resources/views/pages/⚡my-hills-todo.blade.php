@@ -2,6 +2,7 @@
 
 use App\Enums\HillGrouping;
 use App\Models\Group;
+use App\Support\AreaOptions;
 use App\Support\HillProgress;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,9 @@ new #[Title('Hills still to do')] class extends Component
     /** A DoBIH area code, or empty for anywhere. */
     #[Url]
     public string $area = '';
+
+    /** The kind of area being picked (region, murray_section...); it only narrows the area picker. */
+    public string $areaType = '';
 
     /** "region" keeps the hills in their regions; "height" is one list, tallest first. */
     #[Url]
@@ -59,14 +63,21 @@ new #[Title('Hills still to do')] class extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['list', 'scope', 'area', 'sort', 'grouping'], true)) {
+        if (in_array($property, ['list', 'scope', 'area', 'areaType', 'sort', 'grouping'], true)) {
             $this->flipped = [];
             $this->shown = 100;
         }
     }
 
+    /** Choosing another kind of area drops the area picked from the last one. */
+    public function updatedAreaType(): void
+    {
+        $this->area = '';
+    }
+
     public function mount(): void
     {
+        $this->areaType = AreaOptions::typeOf($this->area);
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
     }
 

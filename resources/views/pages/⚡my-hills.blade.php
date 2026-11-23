@@ -2,6 +2,7 @@
 
 use App\Enums\HillGrouping;
 use App\Models\Group;
+use App\Support\AreaOptions;
 use App\Support\HillProgress;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,9 @@ new #[Title('My hills')] class extends Component
     /** A DoBIH area code, or empty for anywhere. */
     #[Url]
     public string $area = '';
+
+    /** The kind of area being picked (region, murray_section...); it only narrows the area picker. */
+    public string $areaType = '';
 
     /** How regions are grouped; remembered on the person. */
     public string $grouping = 'mwis';
@@ -52,8 +56,16 @@ new #[Title('My hills')] class extends Component
         $this->open = [];
     }
 
+    /** Choosing another kind of area drops the area picked from the last one. */
+    public function updatedAreaType(): void
+    {
+        $this->area = '';
+        $this->open = [];
+    }
+
     public function mount(): void
     {
+        $this->areaType = AreaOptions::typeOf($this->area);
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
     }
 
