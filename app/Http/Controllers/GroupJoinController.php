@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Enums\GroupRole;
+use App\Mail\VisitorWaiting;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -12,8 +13,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * The group's reusable link, shared on Signal or WhatsApp. Opening it changes
@@ -56,7 +59,7 @@ class GroupJoinController extends Controller
             }
 
             $this->requireRoom($group);
-            $group->addMember($user, GroupRole::Visitor);
+            $this->arrive($group, $user);
 
             return redirect()->route('groups.show', $group);
         }
@@ -74,7 +77,7 @@ class GroupJoinController extends Controller
             'password' => $validated['password'],
         ]);
 
-        $group->addMember($user, GroupRole::Visitor);
+        $this->arrive($group, $user);
 
         // Sends the verification email. Nothing else in Baggr opens until it is used.
         event(new Registered($user));
@@ -83,6 +86,23 @@ class GroupJoinController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('verification.notice');
+    }
+
+    /**
+     * Make the person a Visitor and tell the group's admins. A mail problem is
+     * reported but never stops someone joining.
+     */
+    private function arrive(Group $group, User $user): void
+    {
+        $group->addMember($user, GroupRole::Visitor);
+
+        try {
+            foreach ($group->users()->wherePivot('role', GroupRole::Admin->value)->get() as $admin) {
+                Mail::to($admin)->send(new VisitorWaiting($group, $user));
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     private function requireRoom(Group $group): void
