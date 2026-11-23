@@ -4,6 +4,7 @@ namespace Tests\Feature\MyHills;
 
 use App\Actions\Walks\LogWalk;
 use App\Enums\HillGrouping;
+use App\Models\Area;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Models\HillClass;
@@ -178,26 +179,28 @@ class HillProgressTest extends TestCase
 
         $labels = array_column((new HillProgress($me, 'M'))->sections(HillGrouping::Mwis), 'label');
 
-        $this->assertSame(['West Highlands', 'Cairngorms NP and Monadhliath', 'Not mapped yet'], $labels);
+        $this->assertSame(['West Highlands', 'Cairngorms NP and Monadhliath', 'No MWIS area'], $labels);
     }
 
-    public function test_smc_sections_are_numbered_and_in_numeric_order(): void
+    public function test_murray_sections_are_numbered_and_in_numeric_order(): void
     {
         $me = User::factory()->create();
-        $this->munro(['smc_section' => 10, 'smc_section_description' => 'Ten']);
-        $this->munro(['smc_section' => 2, 'smc_section_description' => 'Two']);
+        Area::create(['code' => 'M10', 'short_name' => 'M10', 'name' => '10: Ten', 'type' => 'murray_section', 'country' => 'S']);
+        Area::create(['code' => 'M02', 'short_name' => 'M02', 'name' => '02: Two', 'type' => 'murray_section', 'country' => 'S']);
+        $this->munro(['dobih_section' => '10.1']);
+        $this->munro(['dobih_section' => '2.1']);
 
-        $labels = array_column((new HillProgress($me, 'M'))->sections(HillGrouping::Smc), 'label');
+        $labels = array_column((new HillProgress($me, 'M'))->sections(HillGrouping::MurraySection), 'label');
 
         $this->assertSame(['2. Two', '10. Ten'], $labels);
     }
 
-    public function test_a_hill_with_no_smc_section_is_not_mapped_yet(): void
+    public function test_a_hill_with_no_murray_section_is_not_mapped_yet(): void
     {
         $me = User::factory()->create();
-        $this->munro(['smc_section' => null, 'smc_section_description' => null]);
+        $this->munro(['dobih_section' => null]);
 
-        $this->assertSame(['Not mapped yet'], array_column((new HillProgress($me, 'M'))->sections(HillGrouping::Smc), 'label'));
+        $this->assertSame(['Not mapped yet'], array_column((new HillProgress($me, 'M'))->sections(HillGrouping::MurraySection), 'label'));
     }
 
     public function test_hills_in_a_section_are_tallest_first_and_counted(): void
@@ -229,6 +232,34 @@ class HillProgressTest extends TestCase
         $this->assertSame(['name' => 'Munros', 'done' => 1, 'total' => 1], $summary['M']);
         $this->assertSame(['name' => 'Corbetts', 'done' => 1, 'total' => 2], $summary['C']);
         $this->assertSame(0, $summary['Ma']['total']);
+    }
+
+    public function test_an_area_narrows_the_list_and_the_totals(): void
+    {
+        $me = User::factory()->create();
+        $ochil = Area::create(['code' => 'D002', 'short_name' => 'D002', 'name' => 'Ochil Hills', 'type' => 'hill_range', 'country' => 'S']);
+        $in = $this->munro();
+        $in->areas()->attach($ochil);
+        $this->munro();
+        $this->walk($me, [$in->id]);
+
+        $progress = new HillProgress($me, 'M', 'all', 'D002');
+
+        $this->assertSame('D002', $progress->area());
+        $this->assertSame(1, $progress->total());
+        $this->assertSame(1, $progress->doneCount());
+        $this->assertSame(['name' => 'Munros', 'done' => 1, 'total' => 1], $progress->summary()['M']);
+    }
+
+    public function test_an_area_that_does_not_exist_is_ignored(): void
+    {
+        $me = User::factory()->create();
+        $this->munro();
+
+        $progress = new HillProgress($me, 'M', 'all', 'D999');
+
+        $this->assertSame('', $progress->area());
+        $this->assertSame(1, $progress->total());
     }
 
     public function test_a_person_with_no_ascents_has_nothing_done(): void

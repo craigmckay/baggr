@@ -54,15 +54,15 @@ return [
 
     /** What each type of DoBIH area is called, in the order they're shown. */
     'area_types' => [
-        'region' => 'Region',
-        'murray_section' => 'Murray section',
+        'hill_range' => 'Hill range',
+        'murray_section' => 'Murray sub-section',
         'rhb_section' => 'RHB section',
         'island' => 'Island',
         'county' => 'County',
         'authority' => 'Council area',
         'historic_county' => 'Historic county',
         'london_borough' => 'London borough',
-        'named_area' => 'Area',
+        'named_area' => 'Named area',
         'other' => 'Other',
     ],
 

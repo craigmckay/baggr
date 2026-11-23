@@ -48,7 +48,6 @@ class ImportDobihTest extends TestCase
             'name' => 'Ben Nevis',
             'slug' => 'ben-nevis',
             'dobih_number' => 1,
-            'region' => 'West Highlands',
             'walkhighlands_url' => 'https://www.walkhighlands.co.uk/munros/ben-nevis',
             'height_m' => 1345,
         ]);
@@ -59,7 +58,6 @@ class ImportDobihTest extends TestCase
 
         $this->assertSame(4, Hill::count());
         $this->assertSame('ben-nevis', $nevis->slug);
-        $this->assertSame('West Highlands', $nevis->region);
         $this->assertSame('https://www.walkhighlands.co.uk/munros/ben-nevis', $nevis->walkhighlands_url);
         $this->assertNotNull($nevis->photo_url);
         $this->assertSame(1345, $nevis->height_m);
@@ -78,7 +76,7 @@ class ImportDobihTest extends TestCase
         $this->assertEqualsCanonicalizing(['Ma', 'G', 'D'], $cleuch->classes->pluck('code')->all());
 
         $this->assertEqualsCanonicalizing(['D002', 'C001'], $cleuch->areas->pluck('code')->all());
-        $this->assertSame('region', $cleuch->areas->firstWhere('code', 'D002')->type);
+        $this->assertSame('hill_range', $cleuch->areas->firstWhere('code', 'D002')->type);
         $this->assertSame('county', $cleuch->areas->firstWhere('code', 'C001')->type);
         $this->assertTrue((bool) $cleuch->areas->firstWhere('code', 'C001')->pivot->is_county_top);
 

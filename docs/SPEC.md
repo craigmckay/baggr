@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.14, 22 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.16, 23 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -22,6 +22,7 @@ Baggr is a private web app for small groups of friends who climb Scotland's hill
 - **Small and private.** Baggr is for invited groups of friends. It isn't a public social network, and it doesn't need scale features.
 - **Easy to record.** Logging a hill should take two taps. If recording is a chore, the history won't get kept.
 - **Keep it light.** Storing group photos is out (too intensive).
+- **One name, one thing.** Every concept has one name, used the same way in the app, the spec and the code, and no two concepts share a name. The glossary in §3 is the authority.
 
 ### Look and feel
 Baggr gets its own identity, replacing the Laravel defaults.
@@ -56,10 +57,10 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Groups, invitations, members and guests | §2 | **Must** |
 | Walks with days and hills in order | §8, §8.1 | **Must** |
 | Logging: quick hill, round, trip | §5 | **Must** |
-| Hill list: grouping by MWIS/SMC/RHB, MWIS badge, filters | §3 | **Must** |
+| Hill list: grouping by MWIS area or Murray section, list column, MWIS badge, filters | §3 | **Must** |
 | MWIS fetch at 07:00, target day, rating | §4 | **Must** |
-| Region view ("where's best this weekend?") | §4 | **Must** |
-| My completed hills: X / total and by-region breakdown | §6.1 | **Must** |
+| Area view ("where's best this weekend?") | §4 | **Must** |
+| My completed hills: X / total and by-section breakdown | §6.1 | **Must** |
 | My hills to do: list with forecast | §6.2 | **Must** |
 | Plan lifecycle: draft, plan, postpone, cancel, close into ascents | §8 | **Must** |
 | Date polls on a draft plan | §7 | **Must** |
@@ -121,10 +122,10 @@ Baggr gets its own identity, replacing the Laravel defaults.
 
 ---
 
-## 3. Hills and regions
+## 3. Hills and areas
 
 ### Already built
-A list of all 282 Munros and a page for each hill. Each hill has a Walkhighlands link, its MWIS area, grid reference, lat/long, SMC section and RHB section.
+A list of all 282 Munros and a page for each hill. Each hill has a Walkhighlands link, its MWIS area, grid reference, lat/long, Murray section and Murray sub-section.
 
 ### Hill lists
 Baggr covers more than the Munros. There are nine lists, each a DoBIH class (counts are from DoBIH v18.6):
@@ -141,27 +142,53 @@ The list of lists is confirmed: Marilyns are in (added in v0.9); Furths are not.
 - **Data source:** the Database of British and Irish Hills (DoBIH), the same family of data as the current Munro table. DoBIH is licensed under Creative Commons Attribution 4.0 International (checked 17 Nov 2026 at www.hill-bagging.co.uk/dobih/downloads), so it can be imported and reused with a credit.
 - **Credit:** every page that shows hill data carries a small credit: "Hill data: Database of British and Irish Hills v{version}, CC BY 4.0", linked to www.hill-bagging.co.uk/dobih. The version comes from the file imported. It goes on the hill pages and the landing page footer, and is added as soon as possible, because the Munro data already uses DoBIH numbers.
 - **Import the whole database.** All of DoBIH v18.6 is imported, not just the five lists: 21,576 hills (12,422 in Scotland, plus England, Wales, Ireland, the Isle of Man and the Channel Islands), their alternate names, all 66 classifications, all 1,218 areas and the OS map sheets. Scotland is the default view; the other countries are there too, and get an MWIS forecast where MWIS has an area for them. The importer matches hills by DoBIH number, so the 282 Munros already in Baggr keep their Walkhighlands link, MWIS area and photo.
-- **Areas.** DoBIH areas come in several types, shown by the first letter of the area code: DoBIH regions (D, e.g. "Ochil Hills"), Murray sections (M, the SMC sections), RHB sections (R), islands (I), current and historic counties (C, A) and unitary authorities (U). Every type is kept, so a walk can be placed in any of them. A hill can be in several areas. Hills with no tracked list, such as most of the Ochils, are still ordinary hills that can be picked, planned and logged. They just don't count towards a list total.
+- **Areas.** DoBIH areas come in several kinds, shown by the first letter of the area code. Every kind is kept, so a walk can be placed in any of them; the glossary below names them. A hill can be in several areas. Hills with no tracked list, such as most of the Ochils, are still ordinary hills that can be picked, planned and logged. They just don't count towards a list total.
 - **Not copied from the Access file.** The `.mdb` can't be read on the live host. The importer runs locally and the result reaches the live site as a database dump, as the first deployment did.
 - **Linking out:** Walkhighlands has pages for Corbetts, Grahams and Donalds too, so the same slug-matching approach applies. The link is optional, because many hills have no page.
-- **MWIS areas:** built in step 3, before weather. A mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. The Donalds and other southern hills bring in the **Southern Uplands (SU)** area, which currently has no hills. Islands such as Arran need checking against the MWIS area map. Hills outside those ten areas, for example the Cheviots, have no MWIS area.
+- **MWIS areas:** built in step 3, before weather. A mapping table assigns each DoBIH area to an MWIS area, and a hill inherits its MWIS area from it. A hill's own curated MWIS area, as the 282 Munros have, always wins over the mapping. MWIS has ten areas: five Scottish (Northwest Highlands, West Highlands, Cairngorms NP and Monadhliath, Southeastern Highlands, Southern Uplands) and five English and Welsh (Lake District, Yorkshire Dales and North Pennines, Peak District, Snowdonia National Park, Brecon Beacons). The Ochils map to Southeastern Highlands (SH), as MWIS's own area description says. MWIS's own descriptions place Mull and Arran in the West Highlands, and the Cheviots in the Southern Uplands, which MWIS describes as the Galloway hills east to the Lammermuirs plus the Cheviots. The English and Welsh areas follow the national parks, with Snowdonia covering the north of Wales from Pumlumon northwards and the Brecon Beacons the south. Skye is not named on MWIS's site but its forecasts discuss it under the Northwest Highlands.
+- **How a hill's MWIS area is worked out** (built in step 3, `php artisan hills:map-mwis`, stored in `hills.mwis_area` and `areas.mwis_area`), in this order: the area MWIS already forecasts for it (the Munros); its DoBIH named area (the Lake District fells, the Welsh ranges, the Cheviots, the Peak District); its Murray section; or, for the six sections that straddle two MWIS areas, the area of the nearest Munro. The boundaries are close, not exact, because MWIS publishes no boundary lines. **Hills with no MWIS area** show no badge and no forecast: Ireland, the Isle of Man, Shetland, Orkney, the Western Isles, the north east of Scotland (Tomintoul to the Dee valley), and England outside the Lake District, the Dales and North Pennines, the Peak District and the Cheviots.
 - **Choosing a list:** every hill view, stats page and history has a list selector. Munros is the default, and the choice is remembered.
 - **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills that are only on one of the four Tops lists, which show none (a hill on a Tops list that is also on a main list, such as a Corbett that is a Munro Top, still gets one). They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
 - **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**.
 
-### The three groupings
-Wherever hills are grouped, the user picks one of three, and the choice is remembered:
+### Glossary: one name, one thing
+These are the only names for these things, in the app, the spec and the code.
 
-- **MWIS area**: NW, WH, EH, SH, plus SU once the southern lists are added. This is what weather is based on.
-- **SMC section**
-- **RHB section**
+| Name | What it is | Example |
+| --- | --- | --- |
+| **Country** | Scotland, England, Wales, Ireland, the Isle of Man, the Channel Islands | Scotland |
+| **Area** | Any DoBIH place grouping a hill can be in; a hill can be in several | Ochil Hills |
+| **Area category** | The kind of area, picked first. Each has the DoBIH code letter in brackets. | Hill range |
+| **Hill range** (D) | A named range of hills, DoBIH's "region". Southern Scotland only. | Ochil Hills, Galloway Hills, The Cheviots |
+| **Murray section** | One of the numbered sections of Munro's Tables, the number DoBIH gives every hill | 4. Fort William to Loch Ericht |
+| **Murray sub-section** (M) | A section's lettered part. A section that isn't split (Shetland, Orkney, St Kilda, the Isle of Man and several in England) is its own sub-section. | 04B. Loch Treig to Loch Ericht |
+| **RHB section** (R) | DoBIH's own Relative Hills of Britain section. Not the Murray sub-section. | HC04 |
+| **Island** (I), **County** (C), **Historic county** (A), **Council area** (U), **London borough** | As DoBIH gives them | Highland |
+| **Named area** (N) | A named upland or national park, DoBIH's own | Lake District, Dartmoor, Snowdonia |
+| **MWIS area** | One of MWIS's ten forecast areas, always written in full. It comes from the mapping below, not from DoBIH. | West Highlands (WH) |
+| **Section** | A heading row in a list grouped by MWIS area, Murray section or Murray sub-section | |
+| **List** | One of the nine hill lists | Munro Top |
+
+A hill's Murray section and sub-section are worked out from DoBIH's section for it ("4.2" is section 4, sub-section B), so they exist for every hill and no copy is stored. The word "region" is not used for anything.
+
+### The three groupings
+Wherever hills are put into sections, the user picks one of three, and the choice is remembered:
+
+- **MWIS area**: NW, WH, EH, SH, SU, plus the five English and Welsh areas. This is what weather is based on. Hills with none go under "No MWIS area".
+- **Murray section**, for example 4. Fort William to Loch Ericht.
+- **Murray sub-section**, for example 04B. Loch Treig to Loch Ericht.
+
+DoBIH gives every hill a Murray section and sub-section, so both work for every list, not just the Munros.
 
 ### Changes to the hill list
 - **Choose a list** (Munros by default).
-- **Choose an area**, such as the Ochil Hills. Any DoBIH area (§3, Areas) can be picked, and the list narrows to the hills in it. With a list chosen as well (say Marilyns) it shows only that list's hills in the area; with no list it shows every hill in the area, whatever its category. Only hills on a list count towards a total. The same area picker is on My hills and the to-do list.
-- **Group by** MWIS area, SMC section or RHB section.
-- **Show the MWIS area on every hill**, in the list and on the hill's page, as a badge linking to that area's forecast.
-- **Filters:** _Not done by me_, _Not done by anyone in [group]_, _Done by me_, and by height.
+- **Choose an area:** first an **area category** (hill range, Murray sub-section, council area and so on), then one area in it, shown with the number of hills in it. Any DoBIH area (§3, Areas) can be picked, and the list narrows to the hills in it. With a list chosen as well (say Marilyns) it shows only that list's hills in the area; with no list it shows every hill in the area, whatever its category. Only hills on a list count towards a total. The same area picker is on My hills and the to-do list.
+- **Group by** MWIS area, Murray section or Murray sub-section, or not grouped (the default). The hills are shown in section order with a heading for each section, in the accent colour (hill green, heather in dark mode), and the hills under it are indented. The grouping chosen is the one My hills opens with.
+- **Columns:** name, height, MWIS area and list. There is no country or region column: the grouping and the area show where a hill is.
+- **List column:** the most significant of the nine lists the hill is on, in the order Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald, Donald Top, Marilyn (a Munro that is also a Marilyn shows "Munro"). It is blank for a hill on none of them. It shows the full name, or on a phone the short code (M, MT, Ma), and sorts by significance, Munros first.
+- **MWIS area on every hill**, in the list and on the hill's page, as a badge linking to that area's forecast.
+- **Search** matches the start of a word in a hill's name or other names, so "Dum" finds Dumyat. DoBIH area names and MWIS area names are matched too, but only from four letters, so a short term doesn't bring in every hill in a council area.
+- **Filters:** _Not done by me_, _Not done by anyone in [group]_ (for each group the person is in), _Done by me_, and height from and to. The done filters are for signed-in people; visitors don't see them.
 - **Weather on the list:** each hill shows its MWIS area's forecast for the target day (see §4).
 
 ---
@@ -229,7 +256,7 @@ Rain never changes the rating. The thresholds are stored in config so they can b
 - Every weather display links to the full MWIS forecast for that area.
 - **Open question:** MWIS forecasts are copyright. Before Baggr shows extracted values, ask MWIS whether that's OK. If they say no, Baggr falls back to showing only the area plus a link.
 
-### Region view
+### Area view
 A page listing the five Scottish MWIS areas for the target day, then the five English and Welsh ones. Each area shows:
 - its rating (Scottish areas only), headline, wind, rain and cloud-free percentage
 - **how many hills there I haven't done**, and the same count for the selected group
@@ -269,7 +296,7 @@ The Laravel welcome page at `/` goes.
 - **Everything else needs signing in.** A visitor who follows a link to any page is sent to sign in, then taken to that page. **For now the hill list and hill pages stay public**, and move behind sign-in later.
 - **Signed in:** `/` is the home dashboard, a phone-first view of "what's next":
   - **Next plan** (or "No plans yet, start one"), with its date, hills and the weather or outlook rating.
-  - **This weekend:** the five Scottish MWIS areas for the target day with their ratings, each tapping through to the hills I still need there (the region view, §4).
+  - **This weekend:** the five Scottish MWIS areas for the target day with their ratings, each tapping through to the hills I still need there (the area view, §4).
   - **Progress:** X / total for my default list, with the latest ascent.
   - **Open polls** waiting for my vote.
 - The starter kit's separate `/dashboard` route redirects to `/`.
@@ -279,7 +306,7 @@ Three personal views follow. Each can be filtered to **all ascents**, **solo onl
 
 ### 6.1 My completed hills (stats)
 - **X / total** for the chosen list in large type (e.g. 147 / 282 Munros), with the percentage. A small summary row shows the other lists.
-- **By region:** one row per section, using the chosen grouping (MWIS/SMC/RHB). Each completed hill is a small square, coloured solo or by group, with the count. Sections can be expanded to list the hills.
+- **By section:** one row per section, using the chosen grouping (MWIS area, Murray section or Murray sub-section). Each completed hill is a small square, coloured solo or by group, with the count. Sections can be expanded to list the hills.
 - **Map:** every completed hill as a dot, coloured **my colour** if done solo or the **group's colour** if done with a group. Tapping a dot shows the hill name, date and who with.
 - **Headline numbers:** hills this year, first and latest ascent, highest hill, most-climbed hill, number of hills done with each group.
 - **Compleation tracker:** hills left and a projected finish at the current rate.
@@ -287,17 +314,17 @@ Three personal views follow. Each can be filtered to **all ascents**, **solo onl
 ### 6.2 My hills to do
 - **Map and list** of every hill I haven't done.
 - Each hill shows the **target-day forecast** for its MWIS area (§4), with the day named.
-- **Sort** by weather rating, region or height. **Group** by MWIS, SMC or RHB.
+- **Sort** by weather rating, section or height. **Group** by MWIS area, Murray section or Murray sub-section.
 - The selected group's view adds **who in the group also needs it**, which feeds the hill suggestions when building a plan.
 - A **"start a plan" / "add to a draft plan"** action on a hill or a selection of hills.
 
 ### 6.3 History
-- Pick a grouping: **MWIS / SMC / RHB**.
-- A **timeline per region**: one row per region, with time running left to right from the first ascent to today. Each ascent is a **dot** placed at its date.
+- Pick a grouping: **MWIS area / Murray section / Murray sub-section**.
+- A **timeline per section**: one row per section, with time running left to right from the first ascent to today. Each ascent is a **dot** placed at its date.
 - **Dot colour:** my colour if solo, otherwise the group's colour. A **legend** shows them.
 - **Tap or hover a dot** to see the hill, the date, the time taken, the notes and who was there.
 - Option: **first ascents only** (the default) or **all ascents**.
-- **On a phone:** the timeline scrolls sideways, region names stay fixed on the left, and a tap replaces hover.
+- **On a phone:** the timeline scrolls sideways, section names stay fixed on the left, and a tap replaces hover.
 
 _The design references are the "Munros Climbed" and "History" dashboards in Tableau._
 
@@ -485,7 +512,7 @@ Ruled out permanently.
 
 | Question | Decision |
 | --- | --- |
-| Which regions to group by | MWIS area, SMC section and RHB section |
+| How hills are put into sections | MWIS area, Murray section and Murray sub-section, for every hill (v0.16: replaces the names SMC and RHB; DoBIH's own RHB sections are an area category) |
 | Single-day or multi-day plans | Plans can be multi-day |
 | Can guests vote in polls | No. Members only; guests are added to plans by members |
 | Target day early in the week | The furthest-out forecast day available |
@@ -521,8 +548,11 @@ Ruled out permanently.
 | Rating coverage | Go / Marginal / Poor is derived for the five Scottish MWIS areas only; the five English and Welsh areas show their forecast values with no rating |
 | DoBIH licence | CC BY 4.0: free to import and reuse, with the credit in §3 on every page that shows hill data |
 | How much of DoBIH | All of it (all countries, names, classifications, areas, maps); Scotland is the default view |
-| MWIS area for new hills | A mapping table from DoBIH area to MWIS area, built in step 3; hills inherit it. The 282 Munros keep their curated MWIS area. Hills outside the ten MWIS areas show "no MWIS area". |
-| Area filter | Any DoBIH area can be picked on the hill list, My hills and the to-do list, alone or with a list (v0.14) |
+| MWIS area for new hills | A mapping from DoBIH named areas and Murray sections to MWIS areas, built in step 3; hills inherit it. The 282 Munros keep their curated MWIS area. Six straddling sections use the nearest Munro. Hills outside the ten MWIS areas show "no MWIS area" (v0.15: the Cheviots are inside, in Southern Uplands). |
+| Area filter | Any DoBIH area can be picked on the hill list, My hills and the to-do list, alone or with a list (v0.14), by area category and then area (v0.16) |
+| One name, one thing | A principle (§1) with a glossary (§3). "Region" is retired: DoBIH's "regions" are **hill ranges**, MWIS's are **MWIS areas**, groupings produce **sections**, and country is **country** (v0.16) |
+| Hill list columns | Name, height, MWIS area, list. The list column is the hill's most significant list, shown in full or as a short code on a phone, and sortable (v0.16) |
+| Search | Word-start matching on names; area names (DoBIH and MWIS) from four letters (v0.16) |
 | Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
@@ -548,9 +578,9 @@ The Musts come first, then the Shoulds, then the Coulds.
 
 0. **Done (release 3).** **Look and feel and the landing page** (§1, §6.0): the hill mark, wordmark and app icons; a plain landing page instead of the Laravel welcome page; registration off; every page behind sign-in. Until the dashboard exists, `/` sends signed-in users to the hill list.
 1. **Groups, walks and ascents** (§2, §5, §8.1): groups with the four roles, invitations by email and the reusable link (Visitors and approval), walks with days and ordered hills, and logging completed walks (quick, round, trip).
-2. **My hills, core** (§6.1, §6.2): X / total, the by-region breakdown, and the to-do list without weather yet.
+2. **My hills, core** (§6.1, §6.2): X / total, the by-section breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters, the area filter, and the DoBIH area to MWIS area mapping for every hill.
-4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the region view, the home dashboard.
+4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
 7. **Notifications** (§10). Includes the ntfy alert for Follower comments (§11).
@@ -576,9 +606,9 @@ _For Code to check against the database and refine._
 
 | Table | Key columns |
 | --- | --- |
-| `hills` | (exists) + Geograph photo fields; `dobih_number` (exists) is the key. To add from DoBIH: country, feet, drop, col grid reference and height, 10-figure grid reference, feature, parent Marilyn/SMC hill, survey and revision notes, OS map sheets. `name` stops being unique, and `slug` gets a suffix where names clash. |
+| `hills` | (exists) + Geograph photo fields; `dobih_number` (exists) is the key. `region`, `smc_section` and `rhb_section` (and their descriptions) are dropped: a hill's Murray section and sub-section come from `dobih_section`. To add from DoBIH: country, feet, drop, col grid reference and height, 10-figure grid reference, feature, parent Marilyn/SMC hill, survey and revision notes, OS map sheets. `name` stops being unique, and `slug` gets a suffix where names clash. |
 | `hill_names` | `hill_id`, `name`, `sort` (alternate names, for search) |
-| `areas` / `area_hill` | `code`, `name`, `type` (region / murray / rhb / island / county / historic county / authority), `country`; `area_id`, `hill_id`, `is_alt`, `is_county_top`. `areas.mwis_area` (nullable) is the weather mapping. |
+| `areas` / `area_hill` | `code`, `name`, `type` (hill_range / murray_section / rhb_section / island / county / historic_county / authority / london_borough / named_area / other), `country`; `area_id`, `hill_id`, `is_alt`, `is_county_top`. `areas.mwis_area` (nullable) is the weather mapping. |
 | `hill_classes` / `class_hill` | `code`, `name`, `show_in_list`; `hill_id`, `hill_class_id`. The nine lists (§3) are the classes Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald, Donald Top and Marilyn. |
 | `os_maps` / `hill_map` | `type` (e.g. OS25), `ref` (e.g. 047W), `name`; `hill_id`, `os_map_id` |
 | `hill_lists` / `hill_list_hill` | `name`, `slug`; `hill_list_id`, `hill_id` |

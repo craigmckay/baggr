@@ -3,6 +3,7 @@
 namespace Tests\Feature\MyHills;
 
 use App\Actions\Walks\LogWalk;
+use App\Models\Area;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Models\HillClass;
@@ -40,7 +41,6 @@ class MyHillsPagesTest extends TestCase
                 'slug' => "ben-number-{$i}",
                 'dobih_number' => 9000 + $i,
                 'height_m' => 1000 + $i,
-                'region' => 'West Highlands',
             ] + $attributes)->save();
             $hill->classes()->attach($class);
         }
@@ -68,7 +68,7 @@ class MyHillsPagesTest extends TestCase
         $this->actingAs($user)->get(route('my-hills.index'))->assertRedirect(route('verification.notice'));
     }
 
-    public function test_my_hills_shows_how_many_i_have_done_and_the_regions(): void
+    public function test_my_hills_shows_how_many_i_have_done_and_the_sections(): void
     {
         $me = User::factory()->create();
         $done = $this->munro(['name' => 'Ben Done', 'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
@@ -121,12 +121,12 @@ class MyHillsPagesTest extends TestCase
 
         Livewire::actingAs($me)->test('pages::my-hills')
             ->assertSet('grouping', 'mwis')
-            ->set('grouping', 'smc');
+            ->set('grouping', 'murray');
 
-        $this->assertSame('smc', $me->fresh()->hill_grouping);
+        $this->assertSame('murray', $me->fresh()->hill_grouping);
 
-        Livewire::actingAs($me->fresh())->test('pages::my-hills')->assertSet('grouping', 'smc');
-        Livewire::actingAs($me->fresh())->test('pages::my-hills-todo')->assertSet('grouping', 'smc');
+        Livewire::actingAs($me->fresh())->test('pages::my-hills')->assertSet('grouping', 'murray');
+        Livewire::actingAs($me->fresh())->test('pages::my-hills-todo')->assertSet('grouping', 'murray');
     }
 
     public function test_a_made_up_grouping_is_not_saved(): void
@@ -154,7 +154,7 @@ class MyHillsPagesTest extends TestCase
             ->assertSee('1 to go');
     }
 
-    public function test_the_to_do_list_can_be_sorted_by_height_across_regions(): void
+    public function test_the_to_do_list_can_be_sorted_by_height_across_sections(): void
     {
         $me = User::factory()->create();
         $this->munro(['name' => 'Ben Lowest', 'height_m' => 915, 'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/the-northwest-highlands']);
@@ -194,7 +194,7 @@ class MyHillsPagesTest extends TestCase
         Livewire::actingAs($me)->withQueryParams(['scope' => 'solo'])->test('pages::my-hills-todo')->assertSee('Ben Together');
     }
 
-    public function test_my_hills_only_draws_a_regions_hills_once_it_is_opened(): void
+    public function test_my_hills_only_draws_a_sections_hills_once_it_is_opened(): void
     {
         $me = User::factory()->create();
         $this->munro(['name' => 'Ben Hidden', 'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
@@ -207,7 +207,7 @@ class MyHillsPagesTest extends TestCase
             ->assertDontSee('Ben Hidden');
     }
 
-    public function test_changing_the_list_shuts_the_open_regions(): void
+    public function test_changing_the_list_shuts_the_open_sections(): void
     {
         Livewire::actingAs(User::factory()->create())->test('pages::my-hills')
             ->call('toggle', 'mwis-WH')
@@ -215,7 +215,7 @@ class MyHillsPagesTest extends TestCase
             ->assertSet('open', []);
     }
 
-    public function test_a_long_to_do_list_starts_shut_and_opens_a_region_on_request(): void
+    public function test_a_long_to_do_list_starts_shut_and_opens_a_section_on_request(): void
     {
         $this->manyMunros(301, ['mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands']);
 
@@ -245,6 +245,24 @@ class MyHillsPagesTest extends TestCase
             ->assertDontSee('Ben Number1<', false)
             ->call('showMore')
             ->assertSee('Ben Number1<', false);
+    }
+
+    public function test_my_hills_and_the_to_do_list_can_be_narrowed_to_an_area(): void
+    {
+        $me = User::factory()->create();
+        $ochil = Area::create(['code' => 'D002', 'short_name' => 'D002', 'name' => 'Ochil Hills', 'type' => 'hill_range', 'country' => 'S']);
+        $this->munro(['name' => 'Ben Ochil'])->areas()->attach($ochil);
+        $this->munro(['name' => 'Ben Elsewhere']);
+
+        Livewire::actingAs($me)->withQueryParams(['area' => 'D002'])->test('pages::my-hills-todo')
+            ->assertSet('area', 'D002')
+            ->assertSee('Ben Ochil')
+            ->assertSee('Ochil Hills')
+            ->assertDontSee('Ben Elsewhere');
+
+        Livewire::actingAs($me)->withQueryParams(['area' => 'D002'])->test('pages::my-hills')
+            ->assertSee('0 / 1', false)
+            ->assertSee('Ochil Hills');
     }
 
     public function test_the_sidebar_links_to_my_hills(): void

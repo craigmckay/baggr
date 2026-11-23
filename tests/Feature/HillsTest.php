@@ -65,7 +65,7 @@ class HillsTest extends TestCase
     public function test_marilyns_are_a_list(): void
     {
         $this->hillOn('M', ['name' => 'Ben Nevis']);
-        $this->hillOn('Ma', ['name' => 'West Lomond', 'region' => null, 'country' => 'S']);
+        $this->hillOn('Ma', ['name' => 'West Lomond', 'country' => 'S']);
 
         Livewire::test('pages::hills')
             ->assertSee('>Marilyns</option>', false)
@@ -75,10 +75,10 @@ class HillsTest extends TestCase
             ->assertSee('Marilyns');
     }
 
-    public function test_hills_can_be_searched_by_name_or_region(): void
+    public function test_hills_can_be_searched_by_name(): void
     {
-        $this->hillOn('M', ['name' => 'Ben Nevis', 'region' => 'West Highlands']);
-        $this->hillOn('M', ['name' => 'Ben Macdui', 'region' => 'Cairngorms NP and Monadhliath']);
+        $this->hillOn('M', ['name' => 'Ben Nevis']);
+        $this->hillOn('M', ['name' => 'Ben Macdui']);
 
         Livewire::test('pages::hills')
             ->set('search', 'Macdui')
@@ -92,7 +92,7 @@ class HillsTest extends TestCase
         HillName::create(['hill_id' => $nevis->id, 'name' => 'Beinn Nibheis', 'sort_order' => 2]);
 
         $cleuch = $this->hillOn('M', ['name' => 'Ben Cleuch']);
-        $area = Area::create(['code' => 'D002', 'short_name' => 'Ochils', 'name' => 'Ochil Hills', 'type' => 'region', 'country' => 'S']);
+        $area = Area::create(['code' => 'D002', 'short_name' => 'Ochils', 'name' => 'Ochil Hills', 'type' => 'hill_range', 'country' => 'S']);
         $cleuch->areas()->attach($area);
 
         Livewire::test('pages::hills')
@@ -102,13 +102,6 @@ class HillsTest extends TestCase
             ->set('search', 'Ochil')
             ->assertSee('Ben Cleuch')
             ->assertDontSee('Ben Nevis');
-    }
-
-    public function test_a_hill_without_a_region_shows_its_country(): void
-    {
-        $this->hillOn('M', ['name' => 'Ben Nevis', 'region' => null, 'country' => 'S']);
-
-        Livewire::test('pages::hills')->assertSee('Scotland');
     }
 
     public function test_hills_can_be_sorted_by_column(): void

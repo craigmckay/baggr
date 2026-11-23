@@ -2,6 +2,7 @@
 
 use App\Enums\HillGrouping;
 use App\Models\Group;
+use App\Support\AreaOptions;
 use App\Support\HillProgress;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -23,14 +24,21 @@ new #[Title('Hills still to do')] class extends Component
     #[Url]
     public string $scope = 'all';
 
-    /** "region" keeps the hills in their regions; "height" is one list, tallest first. */
+    /** A DoBIH area code, or empty for anywhere. */
     #[Url]
-    public string $sort = 'region';
+    public string $area = '';
 
-    /** How regions are grouped; remembered on the person. */
+    /** The area category being picked (hill_range, murray_section...); it only narrows the area picker. */
+    public string $areaCategory = '';
+
+    /** "section" keeps the hills in their sections; "height" is one list, tallest first. */
+    #[Url]
+    public string $sort = 'section';
+
+    /** How hills are put into sections; remembered on the person. */
     public string $grouping = 'mwis';
 
-    /** Regions the person has flipped from their starting state (open or shut). */
+    /** Sections the person has flipped from their starting state (open or shut). */
     public array $flipped = [];
 
     /** How many hills the tallest-first list shows. */
@@ -55,14 +63,21 @@ new #[Title('Hills still to do')] class extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['list', 'scope', 'sort', 'grouping'], true)) {
+        if (in_array($property, ['list', 'scope', 'area', 'areaCategory', 'sort', 'grouping'], true)) {
             $this->flipped = [];
             $this->shown = 100;
         }
     }
 
+    /** Choosing another kind of area drops the area picked from the last one. */
+    public function updatedAreaCategory(): void
+    {
+        $this->area = '';
+    }
+
     public function mount(): void
     {
+        $this->areaCategory = AreaOptions::categoryOf($this->area);
         $this->grouping = HillGrouping::tryFrom((string) Auth::user()->hill_grouping)?->value ?? 'mwis';
     }
 
@@ -82,7 +97,7 @@ new #[Title('Hills still to do')] class extends Component
     #[Computed]
     public function progress(): HillProgress
     {
-        return new HillProgress(Auth::user(), $this->list, $this->scope);
+        return new HillProgress(Auth::user(), $this->list, $this->scope, $this->area);
     }
 
     /**
@@ -95,7 +110,7 @@ new #[Title('Hills still to do')] class extends Component
     }
 
     /**
-     * The regions that still have hills to do, with only those hills in them.
+     * The sections that still have hills to do, with only those hills in them.
      *
      * @return list<array{key: string, label: string, done: int, total: int, hills: list<array{hill: App\Models\Hill, colour: string|null}>}>
      */
@@ -116,9 +131,9 @@ new #[Title('Hills still to do')] class extends Component
     }
 
     /**
-     * Every hill still to do in one list, tallest first, each with its region.
+     * Every hill still to do in one list, tallest first, each with its section.
      *
-     * @return list<array{hill: App\Models\Hill, region: string}>
+     * @return list<array{hill: App\Models\Hill, section: string}>
      */
     #[Computed]
     public function tallestFirst(): array
@@ -127,7 +142,7 @@ new #[Title('Hills still to do')] class extends Component
 
         foreach ($this->sections as $section) {
             foreach ($section['hills'] as $row) {
-                $rows[] = ['hill' => $row['hill'], 'region' => $section['label']];
+                $rows[] = ['hill' => $row['hill'], 'section' => $section['label']];
             }
         }
 
@@ -152,7 +167,7 @@ new #[Title('Hills still to do')] class extends Component
     <div>
         <flux:heading size="xl">{{ __('Hills still to do') }}</flux:heading>
         <flux:subheading>
-            {{ config('dobih.lists')[$this->progress->list()] }}:
+            {{ config('dobih.lists')[$this->progress->list()] }}@if ($this->progress->area() !== ''), {{ \App\Support\AreaOptions::name($this->progress->area()) }}@endif:
             {{ __(':count to go', ['count' => $this->todoCount()]) }}
         </flux:subheading>
     </div>
@@ -161,11 +176,11 @@ new #[Title('Hills still to do')] class extends Component
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <flux:select wire:model.live="sort" class="max-w-44" aria-label="{{ __('Sort by') }}">
-            <flux:select.option value="region">{{ __('Sort by region') }}</flux:select.option>
+            <flux:select.option value="section">{{ __('Sort by section') }}</flux:select.option>
             <flux:select.option value="height">{{ __('Sort by height') }}</flux:select.option>
         </flux:select>
 
-        <flux:link href="{{ route('my-hills.index', ['list' => $this->progress->list(), 'scope' => $this->progress->scope()]) }}" wire:navigate>
+        <flux:link href="{{ route('my-hills.index', ['list' => $this->progress->list(), 'scope' => $this->progress->scope(), 'area' => $this->progress->area()]) }}" wire:navigate>
             {{ __('Back to my hills') }}
         </flux:link>
     </div>
@@ -180,7 +195,7 @@ new #[Title('Hills still to do')] class extends Component
             @foreach (array_slice($this->tallestFirst, 0, $shown) as $row)
                 <li wire:key="hill-{{ $row['hill']->id }}" class="flex items-center gap-3 py-2 text-sm">
                     <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
-                    <span class="truncate text-zinc-500">{{ $row['region'] }}</span>
+                    <span class="truncate text-zinc-500">{{ $row['section'] }}</span>
                     <span class="ms-auto text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
                 </li>
             @endforeach

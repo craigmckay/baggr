@@ -31,16 +31,11 @@ class HillSeeder extends Seeder
                 'slug' => $row[$columns['WH Slug']],
                 'dobih_number' => $row[$columns['DoBIH Number']],
                 'height_m' => $row[$columns['WH Height (m)']],
-                'region' => $row[$columns['MWIS Area Name']],
                 'walkhighlands_url' => $row[$columns['WH URL']],
                 'mwis_forecast_url' => $row[$columns['MWIS Forecast URL']],
                 'grid_ref' => $row[$columns['Grid Ref']],
                 'latitude' => $row[$columns['Latitude']],
                 'longitude' => $row[$columns['Longitude']],
-                'smc_section' => $row[$columns['SMC Section']],
-                'smc_section_description' => $row[$columns['SMC Section Description']],
-                'rhb_section' => $row[$columns['RHB Section']],
-                'rhb_section_description' => $row[$columns['RHB Section Description']],
                 'created_at' => now(),
                 'updated_at' => now(),
             ])
@@ -53,9 +48,8 @@ class HillSeeder extends Seeder
         // seeder.
         foreach (array_chunk($hills, 100) as $chunk) {
             Hill::upsert($chunk, ['dobih_number'], [
-                'name', 'slug', 'height_m', 'region', 'walkhighlands_url', 'mwis_forecast_url',
-                'grid_ref', 'latitude', 'longitude', 'smc_section', 'smc_section_description',
-                'rhb_section', 'rhb_section_description', 'updated_at',
+                'name', 'slug', 'height_m', 'walkhighlands_url', 'mwis_forecast_url',
+                'grid_ref', 'latitude', 'longitude', 'updated_at',
             ]);
         }
     }

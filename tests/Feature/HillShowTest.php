@@ -19,11 +19,11 @@ class HillShowTest extends TestCase
             'name' => 'Ben Nevis',
             'slug' => 'ben-nevis',
             'height_m' => 1345,
-            'region' => 'West Highlands',
             'grid_ref' => 'NN166712',
-            'rhb_section' => '04A',
-            'rhb_section_description' => 'Fort William to Loch Treig and Loch Leven',
+            'dobih_section' => '4.1',
         ]);
+        Area::create(['code' => 'M04', 'short_name' => 'M04', 'name' => '04: Western Highlands', 'type' => 'murray_section', 'country' => 'S']);
+        $hill->areas()->attach(Area::create(['code' => 'M04A', 'short_name' => 'M04A', 'name' => '04A: Fort William to Loch Treig and Loch Leven', 'type' => 'murray_section', 'country' => 'S']));
 
         $response = $this->get(route('hills.show', $hill));
 
@@ -31,8 +31,10 @@ class HillShowTest extends TestCase
         $response->assertSee('Ben Nevis');
         $response->assertSee('1345');
         $response->assertSee('NN166712');
-        $response->assertSee('04A');
-        $response->assertSee('Fort William to Loch Treig and Loch Leven');
+        $response->assertSee('Murray section');
+        $response->assertSee('4. Western Highlands');
+        $response->assertSee('Murray sub-section');
+        $response->assertSee('04A: Fort William to Loch Treig and Loch Leven');
     }
 
     public function test_it_links_out_to_walkhighlands_and_mwis(): void
@@ -53,12 +55,10 @@ class HillShowTest extends TestCase
         $hill = Hill::factory()->create([
             'name' => 'Ben Cleuch',
             'slug' => 'ben-cleuch',
-            'region' => null,
             'country' => 'S',
             'walkhighlands_url' => null,
             'mwis_forecast_url' => null,
-            'smc_section' => null,
-            'rhb_section' => null,
+            'dobih_section' => null,
             'drop_m' => 595,
         ]);
 
@@ -69,7 +69,7 @@ class HillShowTest extends TestCase
             ->assertSee('595.0m')
             ->assertDontSee('Walkhighlands')
             ->assertDontSee('MWIS')
-            ->assertDontSee('SMC section');
+            ->assertDontSee('Murray section');
     }
 
     public function test_it_lists_the_hills_lists_areas_and_maps(): void
@@ -77,7 +77,7 @@ class HillShowTest extends TestCase
         $hill = Hill::factory()->create();
         $hill->classes()->attach(HillClass::create(['code' => 'G', 'name' => 'Graham', 'show_in_list' => true, 'sort_order' => 1]));
         $hill->classes()->attach(HillClass::create(['code' => 'HHB', 'name' => 'Hidden', 'show_in_list' => false, 'sort_order' => 2]));
-        $hill->areas()->attach(Area::create(['code' => 'D002', 'short_name' => 'Ochils', 'name' => 'Ochil Hills', 'type' => 'region', 'country' => 'S']));
+        $hill->areas()->attach(Area::create(['code' => 'D002', 'short_name' => 'Ochils', 'name' => 'Ochil Hills', 'type' => 'hill_range', 'country' => 'S']));
         $hill->maps()->attach(OsMap::create(['type' => 'OS50', 'ref' => '058', 'name' => 'Perth']));
 
         $this->get(route('hills.show', $hill))

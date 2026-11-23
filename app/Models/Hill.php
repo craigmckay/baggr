@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\HillLists;
+use App\Support\MwisAreas;
 use Database\Factories\HillFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,16 +20,12 @@ class Hill extends Model
         'slug',
         'dobih_number',
         'height_m',
-        'region',
         'walkhighlands_url',
         'mwis_forecast_url',
+        'mwis_area',
         'grid_ref',
         'latitude',
         'longitude',
-        'smc_section',
-        'smc_section_description',
-        'rhb_section',
-        'rhb_section_description',
         'photo_url',
         'photo_page_url',
         'photo_title',
@@ -51,6 +49,37 @@ class Hill extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * The MWIS forecast area the hill belongs to, or null if MWIS covers none
+     * that it sits in. It is the mapped area, or for a Munro the area its stored
+     * forecast link points at.
+     *
+     * @return array{slug: string, code: string, name: string, url: string, order: int}|null
+     */
+    public function mwisArea(): ?array
+    {
+        return MwisAreas::find($this->mwis_area) ?? MwisAreas::fromUrl($this->mwis_forecast_url);
+    }
+
+    /**
+     * The most significant of the nine lists the hill is on (Munro, then Munro Top and
+     * so on), or null if it is on none. Load `classes` first when listing many hills.
+     *
+     * @return array{code: string, name: string}|null
+     */
+    public function mainList(): ?array
+    {
+        return HillLists::mainFor($this);
+    }
+
+    /**
+     * @return HasMany<Ascent, $this>
+     */
+    public function ascents(): HasMany
+    {
+        return $this->hasMany(Ascent::class);
     }
 
     /**
