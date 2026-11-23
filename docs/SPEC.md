@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.16, 23 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.17, 23 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -55,6 +55,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Look and feel: hill mark, baggr wordmark, app icons | §1 | **Must** |
 | Whole app behind sign-in; public registration off | §6.0 | **Must** |
 | Groups, invitations, members and guests | §2 | **Must** |
+| Alert admins when a Visitor is waiting | §2 | **Must** |
 | Walks with days and hills in order | §8, §8.1 | **Must** |
 | Logging: quick hill, round, trip | §5 | **Must** |
 | Hill list: grouping by MWIS area or Murray section, list column, MWIS badge, filters | §3 | **Must** |
@@ -114,6 +115,8 @@ Baggr gets its own identity, replacing the Laravel defaults.
   - If it doesn't, Baggr sends an **invitation email** with a link made for that address alone. It works once, **expires after 7 days**, and an admin can cancel it. Opening it lets the person create an account (a name and a password), and the link in the email proves they own the address, so they don't need a second verification email.
 - **The group's reusable link (way two).** One link per group, **shared by message**, usually on Signal or WhatsApp. It **expires after 7 days**, and an admin can revoke it or make a new one. Opening it only shows the group's name and a **Join** button, so a link preview can't join anyone. A person with an account signs in and presses Join; a person without one creates an account from the page. Either way they arrive as a **Visitor**.
   - **Guards, because a forwarded link is the main risk:** joining through the link is rate-limited, a group holds **at most 30 waiting Visitors**, and the link page shows nothing beyond the group's name. An admin sees each Visitor's name and email before promoting them.
+  - **Admins are told.** When a Visitor arrives through the link, every Admin of the group is **emailed** (through Resend) with the person's name and email address, the group's name and a link to the group page. The email approves nothing: the admin signs in and promotes the person there. One email goes out per arrival: opening the link again or pressing Join twice sends no second one, and nothing is sent if the person is already a member. It is email, not ntfy, because an admin may not have subscribed to the group's ntfy topic, and the ntfy alerts come later (§10).
+  - **Seen at a glance.** A group an admin runs shows a small **"N waiting"** badge on the Groups list, so waiting Visitors don't need the group page opening to be noticed.
 - **Email must be verified.** An account created any other way than an emailed invitation is sent a verification email (through Resend) and can't use Baggr until the link in it is opened. Accounts made by hand with `php artisan users:create` are already verified.
 - Polls, plans and notifications all belong to **one group**.
 - **Ascents belong to the person.** Leaving a group doesn't touch someone's own history, and the group keeps its walks. Deleting an account removes that person's ascents, and the group's walks then show them as a "former member".
@@ -421,6 +424,7 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
   - automatically when a date poll opens (asking people to vote), when a poll reaches its threshold, and when a date is confirmed or a plan is postponed or cancelled
   - by hand: any attendee can tap **Send update**
 - Sending runs from the Laravel scheduler.
+- **Joining is the exception:** an alert that a Visitor is waiting goes to the group's admins by **email**, not ntfy (§2), because it has to reach someone who may not have subscribed to the topic yet.
 - **Don't forget: follower comments (§11).** Follower comments first show on the walk page only. When this step is built, a comment from a Follower should also alert the walkers on that walk through ntfy, so a "How are you getting on?" doesn't wait for someone to open the page.
 
 ---
@@ -537,6 +541,7 @@ Ruled out permanently.
 | Admins removing admins | Any admin can change another admin's role or remove them, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
 | Map tiles | **Thunderforest Outdoors** (OpenStreetMap data, with contours and hillshading), on its free Hobby Project plan: 150,000 tile requests a month, with an API key in the page. **Preferred until we get a definitive answer from Ordnance Survey** (§15). One base layer for every map in Baggr, set in one place so it can be swapped. Rules from Thunderforest's terms: attribution to Thunderforest and OpenStreetMap contributors with working links ("Maps © Thunderforest, Data © OpenStreetMap contributors") on every map, even though Baggr is private; tiles may be cached in the browser or on the device, but **Baggr never caches or proxies tiles on its own server** and never bulk-downloads or pre-caches areas; the free plan is at Thunderforest's discretion and can be withdrawn. **Fallback:** the free OS OpenData styles through the OS Maps API (attribution "Contains OS data © Crown copyright and database right [year]"). The 1:25,000 and 1:50,000 Leisure layers are **not** planned: OS's chat assistant (22 Nov 2026, AI-generated, so not definitive) said the OS Maps API, premium mapping included, is not for personal or small-group projects, and that premium use needs a paid agreement and a card on file. |
+| Admin alert for waiting Visitors | An email to every Admin of the group when a Visitor arrives through the reusable link, with a link to the group page; one per arrival; approves nothing. Plus an "N waiting" badge on the Groups list (v0.17) |
 | Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
 | Which hills get photos | Every hill except those only on one of the four Tops lists, fetched locally in batches and shipped in the database dump |
@@ -580,6 +585,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 1. **Groups, walks and ascents** (§2, §5, §8.1): groups with the four roles, invitations by email and the reusable link (Visitors and approval), walks with days and ordered hills, and logging completed walks (quick, round, trip).
 2. **My hills, core** (§6.1, §6.2): X / total, the by-section breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters, the area filter, and the DoBIH area to MWIS area mapping for every hill.
+3a. **Admin alert for waiting Visitors** (§2): an email to the group's admins when someone arrives through the reusable link, and an "N waiting" badge on the Groups list. Small, and done before step 4 so it is in place as more people are brought in.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
