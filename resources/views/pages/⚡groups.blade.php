@@ -4,6 +4,7 @@ use App\Enums\GroupRole;
 use App\Models\Group;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -22,6 +23,30 @@ new #[Title('Groups')] class extends Component
     public function groups(): Collection
     {
         return Auth::user()->groups()->orderBy('name')->get();
+    }
+
+    /**
+     * How many Visitors are waiting in each group this person is an admin of, by group id.
+     *
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function waiting(): array
+    {
+        $adminOf = $this->groups->filter(fn (Group $group) => $group->pivot->role === GroupRole::Admin->value)->modelKeys();
+
+        if ($adminOf === []) {
+            return [];
+        }
+
+        return DB::table('group_user')
+            ->whereIn('group_id', $adminOf)
+            ->where('role', GroupRole::Visitor->value)
+            ->groupBy('group_id')
+            ->selectRaw('group_id, count(*) as aggregate')
+            ->pluck('aggregate', 'group_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
     }
 
     /**
@@ -85,6 +110,9 @@ new #[Title('Groups')] class extends Component
             >
                 <span class="size-3 shrink-0 rounded-full" style="background-color: {{ $group->colour }}"></span>
                 <span class="min-w-0 flex-1 truncate font-medium">{{ $group->name }}</span>
+                @if (($this->waiting[$group->id] ?? 0) > 0)
+                    <flux:badge size="sm" color="amber" data-test="waiting-badge">{{ __(':count waiting', ['count' => $this->waiting[$group->id]]) }}</flux:badge>
+                @endif
                 <flux:badge size="sm" :color="$group->pivot->role === 'visitor' ? 'amber' : 'zinc'">
                     {{ $group->pivot->role === 'visitor' ? __('Waiting for approval') : GroupRole::from($group->pivot->role)->label() }}
                 </flux:badge>
