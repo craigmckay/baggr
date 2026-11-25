@@ -58,6 +58,14 @@ class Walk extends Model
     }
 
     /**
+     * What the walk is called in a list: its title, or else its first two hills.
+     */
+    public function displayName(): string
+    {
+        return $this->title ?: $this->days->flatMap->hills->pluck('name')->take(2)->implode(', ');
+    }
+
+    /**
      * Anyone who was on the walk, its organiser, or anyone let into its group. A visitor
      * waiting for approval is not let in.
      */

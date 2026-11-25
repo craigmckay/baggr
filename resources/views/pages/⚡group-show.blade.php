@@ -315,7 +315,7 @@ new class extends Component
                 @php $hills = $walk->days->flatMap->hills; @endphp
 
                 <a href="{{ route('walks.show', $walk) }}" wire:navigate class="flex items-baseline justify-between gap-3 rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-700/40" data-test="group-walk-row">
-                    <span class="min-w-0 truncate">{{ $walk->title ?: $hills->pluck('name')->take(2)->implode(', ') }}</span>
+                    <span class="min-w-0 truncate">{{ $walk->displayName() }}</span>
                     <span class="shrink-0 text-sm text-zinc-500">{{ $walk->days->first()?->date?->format('j M Y') }}</span>
                 </a>
             @empty

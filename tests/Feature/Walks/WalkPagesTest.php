@@ -215,6 +215,20 @@ class WalkPagesTest extends TestCase
             ->assertSeeInOrder(['1 May 2020', '1 May 2026']);
     }
 
+    public function test_each_ascent_on_the_hill_page_links_to_its_walk(): void
+    {
+        $me = User::factory()->create();
+        $hill = Hill::factory()->create(['name' => 'Ben Cleuch']);
+        $other = Hill::factory()->create(['name' => 'Ben Ever']);
+        $titled = $this->logWalk($me, [$hill->id], date: '2020-05-01', extra: ['title' => 'Ochil round']);
+        $untitled = $this->logWalk($me, [$hill->id, $other->id], date: '2026-05-01');
+
+        $this->actingAs($me)->get(route('hills.show', $hill))
+            ->assertSeeInOrder(['1 May 2020', 'Ochil round', '1 May 2026', 'Ben Cleuch, Ben Ever'])
+            ->assertSee(route('walks.show', $titled), false)
+            ->assertSee(route('walks.show', $untitled), false);
+    }
+
     public function test_the_hill_page_never_shows_someone_elses_ascents(): void
     {
         $other = User::factory()->create();

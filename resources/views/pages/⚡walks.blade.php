@@ -56,7 +56,7 @@ new #[Title('Walks')] class extends Component
                 data-test="walk-row"
             >
                 <div class="flex items-baseline justify-between gap-3">
-                    <span class="min-w-0 truncate font-medium">{{ $walk->title ?: $hills->pluck('name')->take(2)->implode(', ') }}</span>
+                    <span class="min-w-0 truncate font-medium">{{ $walk->displayName() }}</span>
                     <span class="shrink-0 text-sm text-zinc-500">{{ $date?->format('j M Y') }}</span>
                 </div>
 

@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.18, 25 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.19, 25 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -281,6 +281,7 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 - **With a group:** pick the group and tick who did which hills, the same grid as Closing a plan (§8).
 - **Solo:** the walk has no group.
 - Repeat ascents are allowed. Baggr counts **first ascent** towards the total and keeps every ascent in the history.
+- **Seeing your ascents.** A hill's page lists each of your ascents, oldest first, with its date and the walk's title, which links to the walk. A walk with no title shows its first two hill names, as the walks list does.
 - **Importing past ascents (Must, one-off).** Existing history, back to 1987, lives in an Excel workbook (`munrotab_v7.1.xlsx`, sheets `Climbed`, `Climber` and `Munros`). It is loaded once by `php artisan ascents:import`, which creates the walks through the same code as logging, so they are ordinary completed walks. Its `RunningNo` column matches the running numbers in the Munros sheet, whose DoBIH number gives the hill.
   - **Walks.** One completed walk per group and date. The group codes are `JSD` (Stewart Duthie, solo), `CAM` (Craig McKay, solo) and `MGB` (Mountain Goats Bourich). Solo rows become solo walks owned by that person. MGB rows become group walks with Craig and Stewart as attendees and each hill ticked only for the people who did it; Craig, the group's admin, is the organiser. Consecutive dates in one group become one multi-day walk (one case: Stewart, 26 and 27 Sep 2020).
   - **Matching.** People and groups are matched by name, given on the command line rather than written into the code. The command stops if a name matches no account, or more than one.
