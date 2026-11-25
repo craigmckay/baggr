@@ -12,6 +12,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -79,7 +80,19 @@ class ImportAscents extends Command
             throw new InvalidArgumentException('Give the path of the munrotab workbook.');
         }
 
-        $book = IOFactory::load($file);
+        // The workbook has big sheets we don't need (maps, hills); reading only these two keeps memory low.
+        $reader = IOFactory::createReaderForFile($file);
+        $reader->setReadDataOnly(true);
+        $reader->setLoadSheetsOnly(['Munros', 'Climbed']);
+        // Formatting can stretch these sheets to a million empty rows; only the real cells are needed.
+        $reader->setReadFilter(new class implements IReadFilter
+        {
+            public function readCell(string $columnAddress, int $row, string $worksheetName = ''): bool
+            {
+                return $row <= 2000 && strlen($columnAddress) === 1;
+            }
+        });
+        $book = $reader->load($file);
         $munros = $book->getSheetByName('Munros') ?? throw new InvalidArgumentException('The workbook has no Munros sheet.');
         $climbed = $book->getSheetByName('Climbed') ?? throw new InvalidArgumentException('The workbook has no Climbed sheet.');
 
@@ -151,7 +164,8 @@ class ImportAscents extends Command
      */
     private function rows(Worksheet $sheet): array
     {
-        $all = $sheet->toArray(null, true, false, false);
+        // Use the values Excel saved; recalculating the workbook's table formulas is slow and needs lots of memory.
+        $all = $sheet->toArray(null, false, false, false);
         $header = array_shift($all);
 
         return array_values(array_map(fn (array $row) => array_combine($header, array_slice($row, 0, count($header))), $all));
