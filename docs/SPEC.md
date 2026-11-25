@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.17, 23 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.18, 25 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -83,7 +83,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Saving the tracked trail as a route | §11 | Could |
 | Compleation tracker (projected finish) | §6.1 | Could |
 | Hill photos from Geograph | §15 | Could |
-| Import of past ascents from Excel | §5 | Could |
+| Import of past ascents from Excel (one-off) | §5 | **Must** |
 | Lift sharing | §12 | Could |
 | Calendar feed (.ics) | §12 | Could |
 | Safety/route card | §12 | Could |
@@ -281,7 +281,11 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 - **With a group:** pick the group and tick who did which hills, the same grid as Closing a plan (§8).
 - **Solo:** the walk has no group.
 - Repeat ascents are allowed. Baggr counts **first ascent** towards the total and keeps every ascent in the history.
-- **Importing past ascents (Could).** Existing history, back to 1987, lives in an Excel workbook (`munrotab_v7.1.xlsx`, sheets `Climbed` and `Climber`). Importing it isn't part of version 1: past ascents can be logged by hand, and any import is handled as a one-off job if the need arises. Its `RunningNo` column matches the running numbers in the Munro spreadsheet already in Baggr.
+- **Importing past ascents (Must, one-off).** Existing history, back to 1987, lives in an Excel workbook (`munrotab_v7.1.xlsx`, sheets `Climbed`, `Climber` and `Munros`). It is loaded once by `php artisan ascents:import`, which creates the walks through the same code as logging, so they are ordinary completed walks. Its `RunningNo` column matches the running numbers in the Munros sheet, whose DoBIH number gives the hill.
+  - **Walks.** One completed walk per group and date. The group codes are `JSD` (Stewart Duthie, solo), `CAM` (Craig McKay, solo) and `MGB` (Mountain Goats Bourich). Solo rows become solo walks owned by that person. MGB rows become group walks with Craig and Stewart as attendees and each hill ticked only for the people who did it; Craig, the group's admin, is the organiser. Consecutive dates in one group become one multi-day walk (one case: Stewart, 26 and 27 Sep 2020).
+  - **Matching.** People and groups are matched by name, given on the command line rather than written into the code. The command stops if a name matches no account, or more than one.
+  - **Details.** The hills in a day are ordered by running number, because the workbook has no order; direction and duration are left blank. Repeat ascents are kept (Geal-charn: Stewart solo in 2009 and with MGB in 2026; the first counts). A hill marked "climbed 5 times" with one date (Mount Keen, Craig, 8 Aug 2020) is one ascent with the note "Climbed 5 times; only this date recorded". One extra is added by hand through the command: Ethan joins the MGB walk of 26 Jun 2025 (Braeriach, Sgor an Lochain Uaine, Cairn Toul). Other MGB members aren't in the workbook and get nothing.
+  - **Safety.** Every imported walk's notes say "Imported from munrotab v7.1", so a re-run skips what is already there and `--rollback` removes exactly those walks. `--dry-run` shows the walks and ascents each person would get and changes nothing. On the live site it runs through a one-off cron after a database export, with the workbook uploaded to `storage/app/private/import/` and deleted afterwards.
 
 ---
 
@@ -527,7 +531,7 @@ Ruled out permanently.
 | Which cloud-free figure | Highest in the area for the rating; full range shown |
 | Plan or date first | Plan first: a draft plan with hills or route, then a date poll on it |
 | How history is logged | Always as a walk (plan), created as Completed; a quick one-hill log is a one-day walk |
-| Importing past ascents | Could, not version 1. Any import is handled as a one-off job if needed; past ascents can be logged by hand. |
+| Importing past ascents | Must, as a one-off command (step 3b, v0.18): the workbook's 264 ascents become about 105 completed walks for Stewart, Craig and MGB, rehearsed on a copy of the live database first. Ethan is added to the MGB Braeriach walk of 26 Jun 2025. |
 | Signed-out home page | Plain landing page: hill illustration, baggr wordmark, tagline, Sign in. No data shown. |
 | Hill mark | Direction A, "Peak", with nothing on the summit; its foot sits on the wordmark's baseline |
 | Tagline | Brand tagline "Get yourselves together.", supporting line "The hills are calling." |
@@ -540,7 +544,7 @@ Ruled out permanently.
 | Email verification | Required, except for an account made through an emailed invitation (the link proves the address) and accounts made with `users:create`, which are already verified. Verification emails go through Resend. |
 | Admins removing admins | Any admin can change another admin's role or remove them, but a group always keeps at least one admin |
 | Walks without hills | Not supported. Every plan and every logged walk has at least one hill; outings with none are arranged on WhatsApp. Any hill in the database can be picked, including the Fife Marilyns (West and East Lomond), which are also on the Marilyns list. |
-| Map tiles | **Thunderforest Outdoors** (OpenStreetMap data, with contours and hillshading), on its free Hobby Project plan: 150,000 tile requests a month, with an API key in the page. **Preferred until we get a definitive answer from Ordnance Survey** (§15). One base layer for every map in Baggr, set in one place so it can be swapped. Rules from Thunderforest's terms: attribution to Thunderforest and OpenStreetMap contributors with working links ("Maps © Thunderforest, Data © OpenStreetMap contributors") on every map, even though Baggr is private; tiles may be cached in the browser or on the device, but **Baggr never caches or proxies tiles on its own server** and never bulk-downloads or pre-caches areas; the free plan is at Thunderforest's discretion and can be withdrawn. **Fallback:** the free OS OpenData styles through the OS Maps API (attribution "Contains OS data © Crown copyright and database right [year]"). The 1:25,000 and 1:50,000 Leisure layers are **not** planned: OS's chat assistant (22 Nov 2026, AI-generated, so not definitive) said the OS Maps API, premium mapping included, is not for personal or small-group projects, and that premium use needs a paid agreement and a card on file. |
+| Map tiles | **Thunderforest Outdoors** (OpenStreetMap data, with contours and hillshading), on its free Hobby Project plan: 150,000 tile requests a month, with an API key in the page. **Preferred until we get a definitive answer from Ordnance Survey** (§15). One base layer for every map in Baggr, set in one place so it can be swapped. Rules from Thunderforest's terms: attribution to Thunderforest and OpenStreetMap contributors with working links ("Maps © Thunderforest, Data © OpenStreetMap contributors") on every map, even though Baggr is private; tiles may be cached in the browser or on the device, but **Baggr never caches or proxies tiles on its own server** and never bulk-downloads or pre-caches areas; the free plan is at Thunderforest's discretion and can be withdrawn. **Fallback:** the free OS OpenData styles through the OS Maps API (attribution "Contains OS data © Crown copyright and database right [year]"). The 1:25,000 and 1:50,000 Leisure layers are **not** planned. OS's chat assistant (22 Nov 2026, AI-generated) said Premium isn't for small projects; a human OS adviser then replied (24 Nov 2026) that the Premium layers are free up to a £1,000 monthly allowance (about 1.9 million views at 15 tiles a view) but need a payment card on file, that a key can be restricted to a domain such as baggr.co.uk, and that the API terms bar letting end users download, store or extract Premium data, which GPX download of routes drawn on a Premium map sits close to. Attribution wasn't answered; the terms apply. |
 | Admin alert for waiting Visitors | An email to every Admin of the group when a Visitor arrives through the reusable link, with a link to the group page; one per arrival; approves nothing. Plus an "N waiting" badge on the Groups list (v0.17) |
 | Email | **Resend** (EU region), for password resets and any later email, sent as `noreply@baggr.co.uk`. Set up and tested on 21 Nov 2026: SPF, DKIM and DMARC all pass for baggr.co.uk, with DMARC at `p=none` for now (tighten to `quarantine` once mail has flowed for a couple of weeks). Mailgun was dropped as overkill for this volume; the cPanel mailbox was not used because it shares an IP address with other customers. Click and open tracking are off. The API key lives only in the server's `.env`. |
 | Weather for hills MWIS doesn't claim | Show the mapped (nearest) MWIS area's forecast, labelled "nearest area" (e.g. the Lomonds use Southeastern Highlands) |
@@ -570,7 +574,7 @@ Ruled out permanently.
 ## 15. Open questions
 
 1. **MWIS permission:** Craig sent MWIS a request through their contact form on 22 Nov 2026, covering the logo and linking, and a daily 07:00 read of the ten areas showing a few short extracts (headline, wind, how wet, cloud-free chance, freezing level), credited and linked. Waiting for a reply. If they say no, Baggr shows the area and a link only (§4). Needed before build step 4.
-2. **Map provider:** Thunderforest Outdoors is preferred (§14) until we get a definitive reply. To do: Craig signs up for the free Thunderforest plan (checking that it asks for no payment card and telling Claude before accepting any terms that mention charges), and may still ask OS support through the API enquiry form for a human answer on whether a small private project can use the OS Maps API, and on restricting a key to baggr.co.uk. Not needed before step 8 (GPX routes), the first map.
+2. **Map provider:** Thunderforest Outdoors is preferred (§14) until we get a definitive reply. To do: Craig signs up for the free Thunderforest plan (checking that it asks for no payment card and telling Claude before accepting any terms that mention charges), OS support answered on 24 Nov 2026 (see §14: Premium needs a card, a key can be restricted to a domain, and Premium data can't be downloaded or extracted by end users), so nothing more is needed from OS unless the plan changes. Not needed before step 8 (GPX routes), the first map.
 _Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026); email service, now Resend and tested (21 Nov 2026)._
 
 ---
@@ -586,6 +590,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 2. **My hills, core** (§6.1, §6.2): X / total, the by-section breakdown, and the to-do list without weather yet.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters, the area filter, and the DoBIH area to MWIS area mapping for every hill.
 3a. **Admin alert for waiting Visitors** (§2): an email to the group's admins when someone arrives through the reusable link, and an "N waiting" badge on the Groups list. Small, and done before step 4 so it is in place as more people are brought in.
+3b. **Load the past ascents** (§5): the one-off `ascents:import` command, rehearsed on a copy of the live database, then run on the live site. Done before step 4 so the to-do list and the group's "who still needs it" are real.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
