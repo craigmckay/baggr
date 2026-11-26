@@ -57,7 +57,13 @@ new class extends Component
             </flux:subheading>
         </div>
 
-        <flux:button icon="x-mark" :href="route('walks.index')" wire:navigate variant="ghost" aria-label="{{ __('Back to walks') }}" />
+        <div class="flex shrink-0 items-center gap-2">
+            @if ($walk->canBeEditedBy(auth()->user()))
+                <flux:button size="sm" icon="pencil-square" :href="route('walks.edit', $walk)" wire:navigate data-test="edit-walk-button">{{ __('Edit') }}</flux:button>
+            @endif
+
+            <flux:button icon="x-mark" :href="route('walks.index')" wire:navigate variant="ghost" aria-label="{{ __('Back to walks') }}" />
+        </div>
     </div>
 
     @foreach ($walk->days as $day)

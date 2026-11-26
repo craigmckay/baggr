@@ -89,6 +89,43 @@ class Walk extends Model
     }
 
     /**
+     * Everyone with an account who is recorded on the walk.
+     *
+     * @return list<int>
+     */
+    public function peopleIds(): array
+    {
+        $ids = $this->attendees()->whereNotNull('user_id')->pluck('user_id')
+            ->merge(Ascent::whereIn('walk_day_id', $this->days()->pluck('id'))->pluck('user_id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->all();
+
+        return array_values($ids);
+    }
+
+    /**
+     * A completed walk can be corrected by anyone who was on it, whoever logged it and
+     * its group's admins. On a group walk they must still be an admin or member.
+     */
+    public function canBeEditedBy(User $user): bool
+    {
+        if ($this->status !== WalkStatus::Completed) {
+            return false;
+        }
+
+        $wasThere = $this->organiser_id === $user->id || $this->attendees()->where('user_id', $user->id)->exists();
+
+        if ($this->group === null) {
+            return $wasThere;
+        }
+
+        $role = $this->group->roleOf($user);
+
+        return $role === GroupRole::Admin || ($role === GroupRole::Member && $wasThere);
+    }
+
+    /**
      * Whoever logged it, or an admin of its group.
      */
     public function canBeDeletedBy(User $user): bool
