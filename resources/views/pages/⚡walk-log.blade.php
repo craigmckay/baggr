@@ -1,27 +1,36 @@
 <?php
 
 use App\Actions\Walks\LogWalk;
+use App\Actions\Walks\UpdateWalk;
 use App\Enums\GroupRole;
 use App\Enums\WalkDirection;
 use App\Models\Group;
 use App\Models\Hill;
 use App\Models\User;
+use App\Models\Walk;
+use App\Models\WalkDay;
+use Flux\Flux;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Title;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
-new #[Title('Log a walk')] class extends Component
+/** Logs a walk, or edits one when the address names it. */
+new class extends Component
 {
+    /** The walk being edited, or null when logging a new one. */
+    #[Locked]
+    public ?int $walkId = null;
+
     public ?int $groupId = null;
 
     public string $title = '';
 
     public string $notes = '';
 
-    /** @var list<array{date: string, direction: string, duration: string, hills: list<int>}> */
+    /** @var list<array{id: ?int, date: string, direction: string, duration: string, hills: list<int>}> */
     public array $days = [];
 
     /** The people who were on the walk, by user id. */
@@ -42,8 +51,14 @@ new #[Title('Log a walk')] class extends Component
 
     public string $search = '';
 
-    public function mount(): void
+    public function mount(?Walk $walk = null): void
     {
+        if ($walk?->exists) {
+            $this->fillFrom($walk);
+
+            return;
+        }
+
         $this->people = [Auth::id()];
         $this->days = [$this->blankDay()];
 
@@ -58,12 +73,64 @@ new #[Title('Log a walk')] class extends Component
         }
     }
 
+    private function fillFrom(Walk $walk): void
+    {
+        // Anyone who can't see a walk is told it doesn't exist.
+        abort_unless($walk->canBeSeenBy(Auth::user()), 404);
+        abort_unless($walk->canBeEditedBy(Auth::user()), 403);
+
+        $walk->load(['days.hills', 'days.ascents', 'attendees.guest']);
+
+        $this->walkId = $walk->id;
+        $this->groupId = $walk->group_id;
+        $this->title = (string) $walk->title;
+        $this->notes = (string) $walk->notes;
+        $this->people = $walk->peopleIds();
+        $this->guests = $walk->attendees->whereNotNull('guest_id')->map(fn ($attendee) => $attendee->guest->name)->values()->all();
+
+        foreach ($walk->days->values() as $index => $day) {
+            /** @var WalkDay $day */
+            $this->days[$index] = [
+                'id' => $day->id,
+                'date' => (string) $day->date?->toDateString(),
+                'direction' => (string) $day->direction?->value,
+                'duration' => (string) $day->duration_minutes,
+                'hills' => $day->hills->pluck('id')->all(),
+            ];
+
+            foreach ($day->hills as $hill) {
+                $this->ticks[$index][$hill->id] = $day->ascents->where('hill_id', $hill->id)->pluck('user_id')->map(fn ($id) => (int) $id)->values()->all();
+            }
+        }
+    }
+
+    public function rendering($view): void
+    {
+        $view->title($this->walkId === null ? __('Log a walk') : __('Edit walk'));
+    }
+
     /**
-     * @return array{date: string, direction: string, duration: string, hills: list<int>}
+     * The walk being edited. Checked again on every request, in case the right to edit it has gone.
+     */
+    #[Computed]
+    public function editing(): ?Walk
+    {
+        if ($this->walkId === null) {
+            return null;
+        }
+
+        $walk = Walk::findOrFail($this->walkId);
+        abort_unless($walk->canBeEditedBy(Auth::user()), 403);
+
+        return $walk;
+    }
+
+    /**
+     * @return array{id: ?int, date: string, direction: string, duration: string, hills: list<int>}
      */
     private function blankDay(): array
     {
-        return ['date' => now()->toDateString(), 'direction' => '', 'duration' => '', 'hills' => []];
+        return ['id' => null, 'date' => now()->toDateString(), 'direction' => '', 'duration' => '', 'hills' => []];
     }
 
     /**
@@ -81,21 +148,26 @@ new #[Title('Log a walk')] class extends Component
     }
 
     /**
-     * Who could have been on a walk with the chosen group.
+     * Who could have been on the walk: the chosen group's admins and members, and, when
+     * editing, whoever is on it already.
      *
      * @return Collection<int, User>
      */
     #[Computed]
     public function groupPeople(): Collection
     {
-        if ($this->groupId === null) {
-            return new Collection;
+        $walk = $this->editing;
+        $groupId = $walk === null ? $this->groupId : $walk->group_id;
+
+        $people = $groupId === null ? new Collection : Group::findOrFail($groupId)->users()
+            ->wherePivotIn('role', [GroupRole::Admin->value, GroupRole::Member->value])
+            ->get();
+
+        if ($walk !== null) {
+            $people = $people->concat(User::whereIn('id', $walk->peopleIds())->get())->unique('id');
         }
 
-        return Group::findOrFail($this->groupId)->users()
-            ->wherePivotIn('role', [GroupRole::Admin->value, GroupRole::Member->value])
-            ->orderBy('name')
-            ->get();
+        return new Collection($people->sortBy('name')->values()->all());
     }
 
     /**
@@ -139,6 +211,13 @@ new #[Title('Log a walk')] class extends Component
 
     public function updatedGroupId(): void
     {
+        // A walk keeps its group (or stays solo) once it has been saved.
+        if ($this->editing !== null) {
+            $this->groupId = $this->editing->group_id;
+
+            return;
+        }
+
         // Whoever was chosen for the old group might not be in the new one.
         $this->groupId = $this->groupId === null || $this->groupId === 0 ? null : $this->groupId;
 
@@ -148,36 +227,34 @@ new #[Title('Log a walk')] class extends Component
 
         $this->people = [Auth::id()];
         $this->guests = [];
-        $this->syncTicks();
+
+        foreach ($this->days as $day => $data) {
+            foreach ($data['hills'] as $hillId) {
+                $this->ticks[$day][$hillId] = $this->people;
+            }
+        }
     }
 
+    /**
+     * Someone added to the walk is ticked for every hill, which is what most walks are;
+     * someone taken off loses their ticks. Nobody else's ticks are touched.
+     */
     public function togglePerson(int $userId): void
     {
         if (! $this->groupPeople->contains('id', $userId)) {
             return;
         }
 
-        $this->people = in_array($userId, $this->people, true)
-            ? array_values(array_diff($this->people, [$userId]))
-            : [...$this->people, $userId];
+        $adding = ! in_array($userId, $this->people, true);
 
-        $this->syncTicks();
-    }
+        $this->people = $adding
+            ? [...$this->people, $userId]
+            : array_values(array_diff($this->people, [$userId]));
 
-    /**
-     * Keep the "who climbed what" grid to the people on the walk. Anyone added is ticked for
-     * every hill, which is what most walks are.
-     */
-    private function syncTicks(): void
-    {
         foreach ($this->days as $day => $data) {
             foreach ($data['hills'] as $hillId) {
-                $current = $this->ticks[$day][$hillId] ?? [];
-                $kept = array_values(array_intersect($current, $this->people));
-                $added = array_diff($this->people, $current);
-
-                // A person newly on the walk is ticked everywhere; someone already ticked stays so.
-                $this->ticks[$day][$hillId] = array_values(array_unique([...$kept, ...$added]));
+                $others = array_values(array_diff($this->ticks[$day][$hillId] ?? [], [$userId]));
+                $this->ticks[$day][$hillId] = $adding ? [...$others, $userId] : $others;
             }
         }
     }
@@ -208,9 +285,12 @@ new #[Title('Log a walk')] class extends Component
             return;
         }
 
-        unset($this->days[$index], $this->ticks[$index]);
-        $this->days = array_values($this->days);
-        $this->ticks = array_values($this->ticks);
+        // Line the ticks up with the days first: a day with no hills has none, which would shift the rest.
+        $ticks = array_map(fn (int $day) => $this->ticks[$day] ?? [], array_keys($this->days));
+
+        array_splice($ticks, $index, 1);
+        array_splice($this->days, $index, 1);
+        $this->ticks = $ticks;
         $this->pickerDay = min($this->pickerDay, count($this->days) - 1);
     }
 
@@ -247,6 +327,20 @@ new #[Title('Log a walk')] class extends Component
         $this->days[$day]['hills'] = $hills;
     }
 
+    /** A hill dragged to a new place in its day. */
+    public function sortHill(int $hillId, int $position, int $day): void
+    {
+        $hills = $this->days[$day]['hills'] ?? [];
+
+        if (! in_array($hillId, $hills, true)) {
+            return;
+        }
+
+        $others = array_values(array_diff($hills, [$hillId]));
+        array_splice($others, max(0, min($position, count($others))), 0, [$hillId]);
+        $this->days[$day]['hills'] = $others;
+    }
+
     public function moveToDay(int $from, int $hillId, int $to): void
     {
         if ($from === $to || ! isset($this->days[$to]) || in_array($hillId, $this->days[$to]['hills'], true)) {
@@ -275,7 +369,7 @@ new #[Title('Log a walk')] class extends Component
         $this->guests = array_values($this->guests);
     }
 
-    public function save(LogWalk $logWalk): void
+    public function save(LogWalk $logWalk, UpdateWalk $updateWalk): void
     {
         $this->validate([
             'title' => ['nullable', 'string', 'max:250'],
@@ -291,23 +385,32 @@ new #[Title('Log a walk')] class extends Component
             'days.*.hills.min' => __('Every day needs at least one hill.'),
         ]);
 
+        $data = [
+            'group_id' => $this->groupId,
+            'title' => $this->title,
+            'notes' => $this->notes,
+            'days' => array_map(fn (array $day) => [
+                'id' => $day['id'] ?? null,
+                'date' => $day['date'],
+                'direction' => $day['direction'] !== '' ? $day['direction'] : null,
+                'duration_minutes' => $day['duration'] !== '' ? (int) $day['duration'] : null,
+                'hills' => $day['hills'],
+            ], $this->days),
+            'people' => $this->people,
+            'ticks' => $this->ticks,
+            'guests' => $this->guests,
+        ];
+
         try {
-            $walk = $logWalk->handle(Auth::user(), [
-                'group_id' => $this->groupId,
-                'title' => $this->title,
-                'notes' => $this->notes,
-                'days' => array_map(fn (array $day) => [
-                    'date' => $day['date'],
-                    'direction' => $day['direction'] !== '' ? $day['direction'] : null,
-                    'duration_minutes' => $day['duration'] !== '' ? (int) $day['duration'] : null,
-                    'hills' => $day['hills'],
-                ], $this->days),
-                'people' => $this->people,
-                'ticks' => $this->ticks,
-                'guests' => $this->guests,
-            ]);
+            $walk = $this->editing === null
+                ? $logWalk->handle(Auth::user(), $data)
+                : $updateWalk->handle(Auth::user(), $this->editing, $data);
         } catch (AuthorizationException) {
             abort(403);
+        }
+
+        if ($this->walkId !== null) {
+            Flux::toast(variant: 'success', text: __('Walk saved.'));
         }
 
         $this->redirectRoute('walks.show', $walk, navigate: true);
@@ -318,22 +421,30 @@ new #[Title('Log a walk')] class extends Component
 <div class="mx-auto w-full max-w-2xl space-y-8">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl">{{ __('Log a walk') }}</flux:heading>
-            <flux:subheading>{{ __('Record hills you have climbed: one, a round, or a trip over several days.') }}</flux:subheading>
+            <flux:heading size="xl">{{ $walkId === null ? __('Log a walk') : __('Edit walk') }}</flux:heading>
+            <flux:subheading>
+                @if ($walkId === null)
+                    {{ __('Record hills you have climbed: one, a round, or a trip over several days.') }}
+                @else
+                    {{ $this->editing->group?->name ?? __('Solo') }}
+                @endif
+            </flux:subheading>
         </div>
 
-        <flux:button icon="x-mark" :href="route('walks.index')" wire:navigate variant="ghost" aria-label="{{ __('Cancel') }}" />
+        <flux:button icon="x-mark" :href="$walkId === null ? route('walks.index') : route('walks.show', $walkId)" wire:navigate variant="ghost" aria-label="{{ __('Cancel') }}" />
     </div>
 
     <form wire:submit="save" class="space-y-8" data-test="log-walk-form">
         {{-- Who --}}
         <section class="space-y-4">
-            <flux:select wire:model.live="groupId" :label="__('Who with')">
-                <flux:select.option value="">{{ __('Solo') }}</flux:select.option>
-                @foreach ($this->groups as $group)
-                    <flux:select.option value="{{ $group->id }}">{{ $group->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            @if ($walkId === null)
+                <flux:select wire:model.live="groupId" :label="__('Who with')">
+                    <flux:select.option value="">{{ __('Solo') }}</flux:select.option>
+                    @foreach ($this->groups as $group)
+                        <flux:select.option value="{{ $group->id }}">{{ $group->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
 
             @if ($groupId !== null)
                 <div class="space-y-2" data-test="people">
@@ -395,19 +506,24 @@ new #[Title('Log a walk')] class extends Component
                     @endforeach
                 </flux:select>
 
-                <div class="space-y-2">
+                <div class="space-y-2" wire:sort="sortHill" wire:sort:group-id="{{ $index }}">
                     @forelse ($day['hills'] as $position => $hillId)
                         @php $hill = $this->hillsOnForm[$hillId] ?? null; @endphp
 
                         @if ($hill)
-                            <div class="space-y-2 rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900" wire:key="day-{{ $index }}-hill-{{ $hillId }}" data-test="day-hill">
+                            <div class="space-y-2 rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900" wire:key="day-{{ $index }}-hill-{{ $hillId }}" wire:sort:item="{{ $hillId }}" data-test="day-hill">
                                 <div class="flex items-center justify-between gap-2">
-                                    <div class="min-w-0 font-medium">
+                                    {{-- Only the grip drags, so a phone can still scroll the page. --}}
+                                    <span wire:sort:handle class="shrink-0 cursor-grab touch-none text-zinc-400" title="{{ __('Drag to reorder') }}" aria-hidden="true">
+                                        <flux:icon.bars-3 class="size-4" />
+                                    </span>
+
+                                    <div class="me-auto min-w-0 font-medium">
                                         <span class="text-zinc-500">{{ $position + 1 }}.</span> {{ $hill->name }}
                                         <span class="text-sm font-normal text-zinc-500">{{ $hill->height_m }}m</span>
                                     </div>
 
-                                    <div class="flex shrink-0 items-center">
+                                    <div class="flex shrink-0 items-center" wire:sort:ignore>
                                         <flux:button size="xs" variant="ghost" icon="chevron-up" type="button" wire:click="moveHill({{ $index }}, {{ $hillId }}, 'up')" aria-label="{{ __('Move up') }}" />
                                         <flux:button size="xs" variant="ghost" icon="chevron-down" type="button" wire:click="moveHill({{ $index }}, {{ $hillId }}, 'down')" aria-label="{{ __('Move down') }}" />
                                         <flux:button size="xs" variant="ghost" icon="x-mark" type="button" wire:click="removeHill({{ $index }}, {{ $hillId }})" aria-label="{{ __('Remove') }}" />
@@ -425,7 +541,7 @@ new #[Title('Log a walk')] class extends Component
                                     </flux:select>
                                 @endif
 
-                                @if ($groupId !== null && count($people) > 1)
+                                @if (count($people) > 1 || ($people !== [] && ($ticks[$index][$hillId] ?? []) === []))
                                     <div class="flex flex-wrap gap-1.5" data-test="who-did-it">
                                         @foreach ($this->groupPeople->whereIn('id', $people) as $person)
                                             <flux:button
@@ -500,6 +616,6 @@ new #[Title('Log a walk')] class extends Component
             <flux:textarea wire:model="notes" :label="__('Notes (optional)')" rows="3" />
         </section>
 
-        <flux:button type="submit" variant="primary" class="w-full" data-test="save-walk-button">{{ __('Save the walk') }}</flux:button>
+        <flux:button type="submit" variant="primary" class="w-full" data-test="save-walk-button">{{ $walkId === null ? __('Save the walk') : __('Save changes') }}</flux:button>
     </form>
 </div>
