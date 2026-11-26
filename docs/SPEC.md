@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.19, 25 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.20, 26 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -58,6 +58,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Alert admins when a Visitor is waiting | §2 | **Must** |
 | Walks with days and hills in order | §8, §8.1 | **Must** |
 | Logging: quick hill, round, trip | §5 | **Must** |
+| Editing a logged walk, with dragging to reorder its hills | §5, §8.1 | **Must** |
 | Hill list: grouping by MWIS area or Murray section, list column, MWIS badge, filters | §3 | **Must** |
 | MWIS fetch at 07:00, target day, rating | §4 | **Must** |
 | Area view ("where's best this weekend?") | §4 | **Must** |
@@ -171,6 +172,8 @@ These are the only names for these things, in the app, the spec and the code.
 | **MWIS area** | One of MWIS's ten forecast areas, always written in full. It comes from the mapping below, not from DoBIH. | West Highlands (WH) |
 | **Section** | A heading row in a list grouped by MWIS area, Murray section or Murray sub-section | |
 | **List** | One of the nine hill lists | Munro Top |
+| **Walk** | An outing with its days, hills and people, whatever its status | A weekend in Knoydart |
+| **Plan** | A walk that isn't completed yet (draft, polling, planned or postponed). It isn't a separate thing. | Next month's draft |
 
 A hill's Murray section and sub-section are worked out from DoBIH's section for it ("4.2" is section 4, sub-section B), so they exist for every hill and no copy is stored. The word "region" is not used for anything.
 
@@ -270,7 +273,7 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 
 ## 5. Logging ascents
 
-**Every ascent belongs to a walk, even history.** There's one way to record anything: a walk (a plan) with days and hills in order. Logging after the event just creates a walk that's already **Completed**. This keeps one model for plans, history and stats.
+**Every ascent belongs to a walk, even history.** There's one way to record anything: a walk with days and hills in order, called a plan until it is completed (§3 glossary). Logging after the event just creates a walk that's already **Completed**. This keeps one model for plans, history and stats.
 
 - **Log a hill (quick):** from a hill's page, one tap creates a completed one-day walk with that hill, dated today (changeable). Optional extras:
   - **who with:** solo, or a group and which members
@@ -282,11 +285,17 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 - **Solo:** the walk has no group.
 - Repeat ascents are allowed. Baggr counts **first ascent** towards the total and keeps every ascent in the history.
 - **Seeing your ascents.** A hill's page lists each of your ascents, oldest first, with its date and the walk's title, which links to the walk. A walk with no title shows its first two hill names, as the walks list does.
+- **Editing a logged walk (Must, step 3c).** A completed walk can be corrected without deleting it.
+  - **Which walks.** Every completed walk, however it began. Closing a plan (§8) changes the same walk to Completed and makes no second record, so there is no plan behind it to edit and no copy of what was planned is kept.
+  - **What.** The title, notes, each day's date, hills and their order, direction and time taken, who came (members and guests) and who did which hill. Days can be added and removed. The group, or that it was solo, can't be changed: delete the walk and log it again.
+  - **Who.** Anyone who was on the walk, whoever logged it, and the admins of its group. On a group walk, someone who is now a Follower, or has left the group, can't (§2). Deleting stays with whoever logged it and the group's admins.
+  - **How.** The "Log a walk" form, filled in with the walk's details, with the same rules (nothing in the future, at least one hill a day). Hills are reordered by dragging, or with the up and down buttons (§8.1).
+  - **Kept.** An ascent's note stays for every ascent that survives the edit. Taking a hill or a person off the walk removes those ascents.
 - **Importing past ascents (Must, one-off).** Existing history, back to 1987, lives in an Excel workbook (`munrotab_v7.1.xlsx`, sheets `Climbed`, `Climber` and `Munros`). It is loaded once by `php artisan ascents:import`, which creates the walks through the same code as logging, so they are ordinary completed walks. Its `RunningNo` column matches the running numbers in the Munros sheet, whose DoBIH number gives the hill.
   - **Walks.** One completed walk per group and date. The group codes are `JSD` (Stewart Duthie, solo), `CAM` (Craig McKay, solo) and `MGB` (Mountain Goats Bourich). Solo rows become solo walks owned by that person. MGB rows become group walks with Craig and Stewart as attendees and each hill ticked only for the people who did it; Craig, the group's admin, is the organiser. Consecutive dates in one group become one multi-day walk (one case: Stewart, 26 and 27 Sep 2020).
   - **Matching.** People and groups are matched by name, given on the command line rather than written into the code. The command stops if a name matches no account, or more than one.
   - **Details.** The hills in a day are ordered by running number, because the workbook has no order; direction and duration are left blank. Repeat ascents are kept (Geal-charn: Stewart solo in 2009 and with MGB in 2026; the first counts). A hill marked "climbed 5 times" with one date (Mount Keen, Craig, 8 Aug 2020) is one ascent with the note "Climbed 5 times; only this date recorded". One extra is added by hand through the command: Ethan joins the MGB walk of 26 Jun 2025 (Braeriach, Sgor an Lochain Uaine, Cairn Toul). Other MGB members aren't in the workbook and get nothing.
-  - **Safety.** Every imported walk's notes say "Imported from munrotab v7.1", so a re-run skips what is already there and `--rollback` removes exactly those walks. `--dry-run` shows the walks and ascents each person would get and changes nothing. On the live site it runs through a one-off cron after a database export, with the workbook uploaded to `storage/app/private/import/` and deleted afterwards.
+  - **Safety.** Every imported walk's notes say "Imported from munrotab v7.1", so a re-run skips what is already there and `--rollback` removes exactly those walks. `--dry-run` shows the walks and ascents each person would get and changes nothing. On the live site it runs through a one-off cron after a database export, with the workbook uploaded to `storage/app/private/import/` and deleted afterwards. The import was run on the live site on 25 Nov 2026 and is finished: don't run it or roll it back once walks have been edited, because a rollback would remove the edits.
 
 ---
 
@@ -533,6 +542,7 @@ Ruled out permanently.
 | Plan or date first | Plan first: a draft plan with hills or route, then a date poll on it |
 | How history is logged | Always as a walk (plan), created as Completed; a quick one-hill log is a one-day walk |
 | Importing past ascents | Must, as a one-off command (step 3b, v0.18): the workbook's 264 ascents become about 105 completed walks for Stewart, Craig and MGB, rehearsed on a copy of the live database first. Ethan is added to the MGB Braeriach walk of 26 Jun 2025. |
+| Editing logged walks | Added as step 3c (v0.20), before plans: anyone who was on the walk, whoever logged it and the group's admins can edit it, on the "Log a walk" form. The imported walks need it: they have no direction or time, and their hills are in workbook order. |
 | Signed-out home page | Plain landing page: hill illustration, baggr wordmark, tagline, Sign in. No data shown. |
 | Hill mark | Direction A, "Peak", with nothing on the summit; its foot sits on the wordmark's baseline |
 | Tagline | Brand tagline "Get yourselves together.", supporting line "The hills are calling." |
@@ -592,6 +602,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 3. **Hill list improvements** (§3): grouping, the MWIS badge, filters, the area filter, and the DoBIH area to MWIS area mapping for every hill.
 3a. **Admin alert for waiting Visitors** (§2): an email to the group's admins when someone arrives through the reusable link, and an "N waiting" badge on the Groups list. Small, and done before step 4 so it is in place as more people are brought in.
 3b. **Load the past ascents** (§5): the one-off `ascents:import` command, rehearsed on a copy of the live database, then run on the live site. Done before step 4 so the to-do list and the group's "who still needs it" are real.
+3c. **Edit a logged walk** (§5): the "Log a walk" form for an existing walk, and dragging to reorder hills (§8.1, asked for in step 1 but only the up and down buttons were built). Done before step 5, which reuses the form.
 4. **MWIS data** (§4): the 07:00 fetch, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
