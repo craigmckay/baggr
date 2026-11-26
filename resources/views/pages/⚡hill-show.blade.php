@@ -35,7 +35,7 @@ new class extends Component
     $viewer = auth()->user();
     $canLog = $viewer !== null && $viewer->hasVerifiedEmail();
     $ascents = $canLog
-        ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
+        ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay.walk.days.hills')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
         : collect();
 @endphp
 
@@ -93,15 +93,27 @@ new class extends Component
     @endif
 
     @if ($canLog)
-        <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="my-ascents">
-            <flux:text>
-                @if ($ascents->isEmpty())
-                    {{ __('You haven\'t logged this hill yet.') }}
-                @else
-                    {{ trans_choice('You have climbed this once|You have climbed this :count times', $ascents->count()) }}:
-                    {{ $ascents->map(fn ($ascent) => $ascent->walkDay->date?->format('j M Y'))->implode(', ') }}
+        <div class="flex items-start justify-between gap-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="my-ascents">
+            <div class="min-w-0 space-y-2">
+                <flux:text>
+                    @if ($ascents->isEmpty())
+                        {{ __('You haven\'t logged this hill yet.') }}
+                    @else
+                        {{ trans_choice('You have climbed this once|You have climbed this :count times', $ascents->count()) }}:
+                    @endif
+                </flux:text>
+
+                @if ($ascents->isNotEmpty())
+                    <ul class="space-y-1">
+                        @foreach ($ascents as $ascent)
+                            <li class="flex gap-3 text-sm" data-test="my-ascent">
+                                <span class="w-24 shrink-0 text-zinc-500 tabular-nums">{{ $ascent->walkDay->date?->format('j M Y') }}</span>
+                                <flux:link :href="route('walks.show', $ascent->walkDay->walk)" wire:navigate class="min-w-0">{{ $ascent->walkDay->walk->displayName() }}</flux:link>
+                            </li>
+                        @endforeach
+                    </ul>
                 @endif
-            </flux:text>
+            </div>
 
             <flux:button size="sm" variant="primary" :href="route('walks.log', ['hill' => $hill->slug])" wire:navigate class="shrink-0" data-test="log-this-hill">
                 {{ __('Log this hill') }}
