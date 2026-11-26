@@ -172,6 +172,8 @@ These are the only names for these things, in the app, the spec and the code.
 | **MWIS area** | One of MWIS's ten forecast areas, always written in full. It comes from the mapping below, not from DoBIH. | West Highlands (WH) |
 | **Section** | A heading row in a list grouped by MWIS area, Murray section or Murray sub-section | |
 | **List** | One of the nine hill lists | Munro Top |
+| **Walk** | An outing with its days, hills and people, whatever its status | A weekend in Knoydart |
+| **Plan** | A walk that isn't completed yet (draft, polling, planned or postponed). It isn't a separate thing. | Next month's draft |
 
 A hill's Murray section and sub-section are worked out from DoBIH's section for it ("4.2" is section 4, sub-section B), so they exist for every hill and no copy is stored. The word "region" is not used for anything.
 
@@ -271,7 +273,7 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 
 ## 5. Logging ascents
 
-**Every ascent belongs to a walk, even history.** There's one way to record anything: a walk (a plan) with days and hills in order. Logging after the event just creates a walk that's already **Completed**. This keeps one model for plans, history and stats.
+**Every ascent belongs to a walk, even history.** There's one way to record anything: a walk with days and hills in order, called a plan until it is completed (§3 glossary). Logging after the event just creates a walk that's already **Completed**. This keeps one model for plans, history and stats.
 
 - **Log a hill (quick):** from a hill's page, one tap creates a completed one-day walk with that hill, dated today (changeable). Optional extras:
   - **who with:** solo, or a group and which members
@@ -284,6 +286,7 @@ Tapping an area opens **My hills to do** (§6) filtered to that area. This answe
 - Repeat ascents are allowed. Baggr counts **first ascent** towards the total and keeps every ascent in the history.
 - **Seeing your ascents.** A hill's page lists each of your ascents, oldest first, with its date and the walk's title, which links to the walk. A walk with no title shows its first two hill names, as the walks list does.
 - **Editing a logged walk (Must, step 3c).** A completed walk can be corrected without deleting it.
+  - **Which walks.** Every completed walk, however it began. Closing a plan (§8) changes the same walk to Completed and makes no second record, so there is no plan behind it to edit and no copy of what was planned is kept.
   - **What.** The title, notes, each day's date, hills and their order, direction and time taken, who came (members and guests) and who did which hill. Days can be added and removed. The group, or that it was solo, can't be changed: delete the walk and log it again.
   - **Who.** Anyone who was on the walk, whoever logged it, and the admins of its group. On a group walk, someone who is now a Follower, or has left the group, can't (§2). Deleting stays with whoever logged it and the group's admins.
   - **How.** The "Log a walk" form, filled in with the walk's details, with the same rules (nothing in the future, at least one hill a day). Hills are reordered by dragging, or with the up and down buttons (§8.1).
