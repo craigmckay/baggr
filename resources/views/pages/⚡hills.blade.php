@@ -252,6 +252,10 @@ new #[Title('Hills')] class extends Component
 };
 ?>
 
+@php
+    $forecasts = new \App\Support\Mwis\Forecasts;
+@endphp
+
 <div class="w-full space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Hills') }}</flux:heading>
@@ -309,12 +313,19 @@ new #[Title('Hills')] class extends Component
         @endif
     </div>
 
+    @if ($forecasts->day())
+        <div class="space-y-1">
+            <x-forecast-day :forecasts="$forecasts" />
+            <x-mwis-credit />
+        </div>
+    @endif
+
     <flux:table class="w-full">
         <flux:table.columns>
             <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')" class="w-[40%] !whitespace-normal sm:w-auto">
                 {{ __('Name') }}
             </flux:table.column>
-            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[20%] sm:w-auto">
+            <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[20%] !whitespace-normal sm:w-auto">
                 {{ __('Height (m)') }}
             </flux:table.column>
             @if ($this->canSeeMwis())
@@ -359,6 +370,19 @@ new #[Title('Hills')] class extends Component
                                     title="{{ __('MWIS forecast: :area', ['area' => $mwis['name']]) }}"
                                     class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
                                 >{{ $mwis['code'] }}</a>
+
+                                @if ($hill->mwis_nearest)
+                                    <div class="text-xs text-zinc-500" title="{{ __('Nearest area: MWIS doesn\'t say it covers this hill') }}">{{ __('nearest') }}</div>
+                                @endif
+
+                                @if ($forecast = $forecasts->forArea($mwis['code']))
+                                    <div class="mt-1"><x-weather-rating :forecast="$forecast" /></div>
+
+                                    {{-- Only when this area's day isn't the one the page is headed with. --}}
+                                    @if (! $forecast->date->isSameDay($forecasts->day()))
+                                        <div class="text-xs text-zinc-500">{{ $forecast->date->format('D j') }}</div>
+                                    @endif
+                                @endif
                             @endif
                         </flux:table.cell>
                     @endif

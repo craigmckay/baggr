@@ -16,6 +16,44 @@ return [
 
     'base_url' => 'https://www.mwis.org.uk/forecasts',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Forecasts
+    |--------------------------------------------------------------------------
+    |
+    | Off until MWIS gives permission to show extracts from their forecasts
+    | (spec §4). While it is off Baggr fetches nothing from MWIS and shows only
+    | areas and links to the forecasts.
+    |
+    | Forecasts are fetched twice a day, at "fetch_hours" UK time, through
+    | Laravel's scheduler.
+    |
+    */
+
+    'enabled' => (bool) env('MWIS_FORECASTS', false),
+
+    // 07:00 catches an overnight change before people set off; 18:00 is after
+    // MWIS's main afternoon issue.
+    'fetch_hours' => [7, 18],
+
+    'timezone' => 'Europe/London',
+
+    // How Baggr names itself to MWIS, so they can tell who is reading.
+    'user_agent' => env('MWIS_USER_AGENT', 'Mozilla/5.0 (compatible; Baggr/1.0; +https://baggr.co.uk)'),
+
+    /*
+    | The rating (Scottish areas only). Rain never changes it. Poor if the best
+    | chance of cloud-free summits is under "poor_below_cloud_free" per cent or
+    | the wind is over "poor_above_wind" mph; Marginal from "marginal_from_wind"
+    | mph; otherwise Go.
+    */
+
+    'rating' => [
+        'poor_below_cloud_free' => 40,
+        'poor_above_wind' => 40,
+        'marginal_from_wind' => 30,
+    ],
+
     'areas' => [
         'the-northwest-highlands' => ['code' => 'NW', 'name' => 'Northwest Highlands', 'path' => 'scottish'],
         'west-highlands' => ['code' => 'WH', 'name' => 'West Highlands', 'path' => 'scottish'],
@@ -104,5 +142,33 @@ return [
     */
 
     'nearest_munro_sections' => ['M02A', 'M02B', 'M04B', 'M05B', 'M06B', 'M07A'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hills MWIS doesn't claim
+    |--------------------------------------------------------------------------
+    |
+    | A hill can be given an MWIS area that MWIS's own description of the area
+    | doesn't take in, such as the Lomonds in Fife. Baggr labels that the
+    | "nearest area". A hill in one of these Murray sub-sections is labelled,
+    | unless it has its own MWIS link, is in one of the named areas above, or is
+    | in one of the hill ranges or hill sections below.
+    |
+    */
+
+    'nearest_area_sections' => [
+        'M17D', 'M17F',                 // Canna, Rum and Eigg; Coll and Tiree
+        'M20A', 'M20B',                 // Jura and Colonsay; Islay
+        'M26A', 'M26B',                 // The Central Belt, other than the Ochils and Sidlaws
+        'M27A',                         // Ayr to the River Clyde
+        'M34A', 'M34B', 'M34C',         // Round the Lake District
+        'M35A', 'M35B',                 // Round the Dales and North Pennines
+    ],
+
+    // Glen Artney, the Ochils and the Southern Uplands ranges, which MWIS's descriptions take in.
+    'claimed_hill_ranges' => ['D001', 'D002', 'D003', 'D004', 'D005', 'D006', 'D007', 'D008', 'D009', 'D010', 'D011', 'D012'],
+
+    // The Sidlaws, which MWIS's "Angus hills" take in.
+    'claimed_rhb_sections' => ['R20I'],
 
 ];

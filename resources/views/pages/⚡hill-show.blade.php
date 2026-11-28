@@ -34,6 +34,8 @@ new class extends Component
     $viewer = auth()->user();
     $mwis = $viewer !== null ? $hill->mwisArea() : null;
     $forecastUrl = $viewer !== null ? $hill->mwis_forecast_url : null;
+    $forecasts = new \App\Support\Mwis\Forecasts;
+    $forecast = $mwis !== null ? $forecasts->forArea($mwis['code']) : null;
     $canLog = $viewer !== null && $viewer->hasVerifiedEmail();
     $ascents = $canLog
         ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay.walk.days.hills')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
@@ -93,6 +95,20 @@ new class extends Component
         </div>
     @endif
 
+    @if ($forecast)
+        <div @class(['space-y-3 rounded-lg border p-3', 'border-zinc-200 dark:border-zinc-700' => ! $forecasts->isForAnotherDay($forecast), 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40' => $forecasts->isForAnotherDay($forecast)]) data-test="hill-forecast">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <flux:heading>{{ $forecast->date->format('l j F') }}</flux:heading>
+                    <flux:text>{{ $mwis['name'] }}@if ($hill->mwis_nearest) &middot; {{ __('nearest area') }}@endif</flux:text>
+                </div>
+                <x-weather-rating :forecast="$forecast" />
+            </div>
+
+            <x-forecast-details :forecast="$forecast" :forecasts="$forecasts" :url="$mwis['url']" />
+        </div>
+    @endif
+
     @if ($canLog)
         <div class="flex items-start justify-between gap-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="my-ascents">
             <div class="min-w-0 space-y-2">
@@ -148,6 +164,9 @@ new class extends Component
                 <dt class="text-zinc-500">{{ __('MWIS area') }}</dt>
                 <dd class="font-medium">
                     <a href="{{ $mwis['url'] }}" target="_blank" rel="noopener" class="underline" data-test="mwis-area">{{ $mwis['name'] }}</a>
+                    @if ($hill->mwis_nearest)
+                        <span class="font-normal text-zinc-500">({{ __('nearest area') }})</span>
+                    @endif
                 </dd>
             </div>
         @endif

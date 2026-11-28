@@ -65,6 +65,43 @@ class MwisAreaMapperTest extends TestCase
         $this->assertSame('LD', $this->mapped($fell));
     }
 
+    public function test_hills_mwis_does_not_name_are_labelled_without_changing_their_area(): void
+    {
+        $lomond = $this->hillIn(['M26A' => 'murray_section']);
+        $ochil = $this->hillIn(['M26A' => 'murray_section', 'D002' => 'hill_range']);
+        $islay = $this->hillIn(['M20B' => 'murray_section']);
+        $arran = $this->hillIn(['M20C' => 'murray_section']);
+        $cowal = $this->hillIn(['M19C' => 'murray_section']);
+        $fell = $this->hillIn(['NE05' => 'named_area', 'M34A' => 'murray_section']);
+        $fringe = $this->hillIn(['M34A' => 'murray_section']);
+        $sidlaw = $this->hillIn(['M26A' => 'murray_section', 'R20I' => 'rhb_section']);
+
+        app(MwisAreaMapper::class)->run();
+
+        $nearest = fn (Hill $hill) => $hill->fresh()->mwis_nearest;
+
+        $this->assertSame('SH', $this->mapped($lomond));
+        $this->assertTrue($nearest($lomond));
+        $this->assertTrue($nearest($islay));
+        $this->assertTrue($nearest($fringe));
+        $this->assertFalse($nearest($ochil));
+        $this->assertFalse($nearest($arran));
+        $this->assertFalse($nearest($cowal));
+        $this->assertFalse($nearest($fell));
+        $this->assertFalse($nearest($sidlaw));
+    }
+
+    public function test_a_hill_with_its_own_forecast_link_is_never_labelled_nearest(): void
+    {
+        $munro = $this->hillIn(['M26A' => 'murray_section'], [
+            'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/southeastern-highlands',
+        ]);
+
+        app(MwisAreaMapper::class)->run();
+
+        $this->assertFalse($munro->fresh()->mwis_nearest);
+    }
+
     public function test_hills_outside_the_ten_areas_have_none(): void
     {
         $irish = $this->hillIn(['M50C' => 'murray_section']);

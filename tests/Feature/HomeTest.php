@@ -30,9 +30,18 @@ class HomeTest extends TestCase
         $this->get('/')->assertDontSee('Ben Nevis');
     }
 
-    public function test_signed_in_users_are_sent_to_the_hill_list(): void
+    public function test_signed_in_users_see_the_dashboard(): void
     {
         $this->actingAs(User::factory()->create())
+            ->get('/')
+            ->assertOk()
+            ->assertSee('This weekend')
+            ->assertSee('Nothing logged yet.');
+    }
+
+    public function test_someone_who_has_not_verified_their_email_is_sent_to_the_hill_list(): void
+    {
+        $this->actingAs(User::factory()->unverified()->create())
             ->get('/')
             ->assertRedirect(route('hills.index'));
     }

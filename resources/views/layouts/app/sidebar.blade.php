@@ -12,12 +12,20 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
+                    @auth
+                        <flux:sidebar.item icon="home" :href="route('home')" :current="request()->routeIs('home')" wire:navigate>
+                            {{ __('Home') }}
+                        </flux:sidebar.item>
+                    @endauth
                     <flux:sidebar.item icon="map" :href="route('hills.index')" :current="request()->routeIs('hills.*')" wire:navigate>
                         {{ __('Hills') }}
                     </flux:sidebar.item>
                     @auth
                         <flux:sidebar.item icon="check-circle" :href="route('my-hills.index')" :current="request()->routeIs('my-hills.*')" wire:navigate>
                             {{ __('My hills') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="cloud" :href="route('weather')" :current="request()->routeIs('weather')" wire:navigate>
+                            {{ __('Weather') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="flag" :href="route('walks.index')" :current="request()->routeIs('walks.*')" wire:navigate>
                             {{ __('Walks') }}

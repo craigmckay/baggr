@@ -4,6 +4,8 @@ use App\Enums\HillGrouping;
 use App\Models\Group;
 use App\Support\AreaOptions;
 use App\Support\HillProgress;
+use App\Support\Mwis\Forecasts;
+use App\Support\MwisAreas;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -31,7 +33,11 @@ new #[Title('Hills still to do')] class extends Component
     /** The area category being picked (hill_range, murray_section...); it only narrows the area picker. */
     public string $areaCategory = '';
 
-    /** "section" keeps the hills in their sections; "height" is one list, tallest first. */
+    /** An MWIS area code (WH), or empty for all. Set by tapping an area on the weather page. */
+    #[Url]
+    public string $mwis = '';
+
+    /** "section" keeps the hills in their sections; "height" and "weather" are single lists. */
     #[Url]
     public string $sort = 'section';
 
@@ -63,7 +69,7 @@ new #[Title('Hills still to do')] class extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['list', 'scope', 'area', 'areaCategory', 'sort', 'grouping'], true)) {
+        if (in_array($property, ['list', 'scope', 'area', 'areaCategory', 'mwis', 'sort', 'grouping'], true)) {
             $this->flipped = [];
             $this->shown = 100;
         }
@@ -97,7 +103,7 @@ new #[Title('Hills still to do')] class extends Component
     #[Computed]
     public function progress(): HillProgress
     {
-        return new HillProgress(Auth::user(), $this->list, $this->scope, $this->area);
+        return new HillProgress(Auth::user(), $this->list, $this->scope, $this->area, $this->mwis);
     }
 
     /**
@@ -151,6 +157,30 @@ new #[Title('Hills still to do')] class extends Component
         return $rows;
     }
 
+    #[Computed]
+    public function forecasts(): Forecasts
+    {
+        return new Forecasts;
+    }
+
+    /**
+     * Every hill still to do, best weather first and then tallest. Hills with no rating come last.
+     *
+     * @return list<array{hill: App\Models\Hill, section: string}>
+     */
+    #[Computed]
+    public function bestWeatherFirst(): array
+    {
+        $rows = $this->tallestFirst;
+
+        $order = fn (array $row) => $this->forecasts->forArea($row['hill']->mwisArea()['code'] ?? null)?->rating()?->order() ?? 3;
+
+        // The sort is stable, so hills with the same rating stay tallest first.
+        usort($rows, fn (array $a, array $b) => $order($a) <=> $order($b));
+
+        return $rows;
+    }
+
     public function todoCount(): int
     {
         return $this->progress->total() - $this->progress->doneCount();
@@ -172,12 +202,21 @@ new #[Title('Hills still to do')] class extends Component
         </flux:subheading>
     </div>
 
+    @if ($this->progress->mwisArea() !== '')
+        <flux:button size="sm" icon:trailing="x-mark" wire:click="$set('mwis', '')" data-test="mwis-filter">
+            {{ MwisAreas::find($this->progress->mwisArea())['name'] }}
+        </flux:button>
+    @endif
+
     @include('partials.hill-filters')
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <flux:select wire:model.live="sort" class="max-w-44" aria-label="{{ __('Sort by') }}">
             <flux:select.option value="section">{{ __('Sort by section') }}</flux:select.option>
             <flux:select.option value="height">{{ __('Sort by height') }}</flux:select.option>
+            @if ($this->forecasts->day())
+                <flux:select.option value="weather">{{ __('Sort by weather') }}</flux:select.option>
+            @endif
         </flux:select>
 
         <flux:link href="{{ route('my-hills.index', ['list' => $this->progress->list(), 'scope' => $this->progress->scope(), 'area' => $this->progress->area()]) }}" wire:navigate>
@@ -185,24 +224,40 @@ new #[Title('Hills still to do')] class extends Component
         </flux:link>
     </div>
 
+    @if ($this->forecasts->day())
+        <div class="space-y-1">
+            <x-forecast-day :forecasts="$this->forecasts" />
+            <x-mwis-credit />
+        </div>
+    @endif
+
     @if ($this->todoCount() === 0)
         <flux:callout icon="check-circle" variant="success">
             <flux:callout.heading>{{ __('All done') }}</flux:callout.heading>
             <flux:callout.text>{{ __('Nothing left on this list. Compleat!') }}</flux:callout.text>
         </flux:callout>
-    @elseif ($sort === 'height')
+    @elseif ($sort === 'height' || $sort === 'weather')
+        @php($rows = $sort === 'weather' ? $this->bestWeatherFirst : $this->tallestFirst)
         <ul class="divide-y divide-zinc-200 dark:divide-zinc-700">
-            @foreach (array_slice($this->tallestFirst, 0, $shown) as $row)
+            @foreach (array_slice($rows, 0, $shown) as $row)
                 <li wire:key="hill-{{ $row['hill']->id }}" class="flex items-center gap-3 py-2 text-sm">
                     <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
                     <span class="truncate text-zinc-500">{{ $row['section'] }}</span>
-                    <span class="ms-auto text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
+                    <span class="ms-auto flex items-center gap-2">
+                        @if ($forecast = $this->forecasts->forArea($row['hill']->mwisArea()['code'] ?? null))
+                            @if ($row['hill']->mwis_nearest)
+                                <span class="text-xs text-zinc-500">{{ __('nearest area') }}</span>
+                            @endif
+                            <x-weather-rating :forecast="$forecast" />
+                        @endif
+                        <span class="text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
+                    </span>
                 </li>
             @endforeach
         </ul>
 
-        @if (count($this->tallestFirst) > $shown)
-            <flux:button wire:click="showMore" class="w-full">{{ __('Show more') }} ({{ count($this->tallestFirst) - $shown }})</flux:button>
+        @if (count($rows) > $shown)
+            <flux:button wire:click="showMore" class="w-full">{{ __('Show more') }} ({{ count($rows) - $shown }})</flux:button>
         @endif
     @else
         <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -222,7 +277,15 @@ new #[Title('Hills still to do')] class extends Component
                         @foreach ($section['hills'] as $row)
                             <li class="flex items-center gap-2" wire:key="hill-{{ $section['key'] }}-{{ $row['hill']->id }}">
                                 <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
-                                <span class="ms-auto text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
+                                <span class="ms-auto flex items-center gap-2">
+                                    @if ($forecast = $this->forecasts->forArea($row['hill']->mwisArea()['code'] ?? null))
+                                        @if ($row['hill']->mwis_nearest)
+                                            <span class="text-xs text-zinc-500">{{ __('nearest area') }}</span>
+                                        @endif
+                                        <x-weather-rating :forecast="$forecast" />
+                                    @endif
+                                    <span class="text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
+                                </span>
                                 <a href="{{ route('walks.log', ['hill' => $row['hill']->slug]) }}" wire:navigate class="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-white">{{ __('Log') }}</a>
                             </li>
                         @endforeach

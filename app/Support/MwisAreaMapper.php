@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Works out each hill's MWIS area (spec §3), in this order:
@@ -46,11 +47,42 @@ class MwisAreaMapper
 
         $nearest = $this->mapStraddlingSections();
 
+        // An earlier migration runs this before the column is there.
+        if (Schema::hasColumn('hills', 'mwis_nearest')) {
+            $this->markNearestAreas();
+        }
+
         return [
             'mapped' => DB::table('hills')->whereNotNull('mwis_area')->count(),
             'nearest' => $nearest,
             'none' => DB::table('hills')->whereNull('mwis_area')->count(),
         ];
+    }
+
+    /**
+     * Marks the hills whose MWIS area is only the nearest one: MWIS's description
+     * of the area doesn't take them in (see config/mwis.php).
+     *
+     * @return int how many were marked
+     */
+    public function markNearestAreas(): int
+    {
+        $hillsIn = fn (string $type, array $codes) => DB::table('area_hill')
+            ->join('areas', 'areas.id', '=', 'area_hill.area_id')
+            ->where('areas.type', $type)
+            ->whereIn('areas.code', $codes)
+            ->select('area_hill.hill_id');
+
+        DB::table('hills')->update(['mwis_nearest' => false]);
+
+        return DB::table('hills')
+            ->whereNotNull('mwis_area')
+            ->whereNull('mwis_forecast_url')
+            ->whereIn('id', $hillsIn('murray_section', config('mwis.nearest_area_sections')))
+            ->whereNotIn('id', $hillsIn('named_area', array_keys(config('mwis.named_areas'))))
+            ->whereNotIn('id', $hillsIn('hill_range', config('mwis.claimed_hill_ranges')))
+            ->whereNotIn('id', $hillsIn('rhb_section', config('mwis.claimed_rhb_sections')))
+            ->update(['mwis_nearest' => true]);
     }
 
     private function writeAreaMapping(): void
