@@ -29,10 +29,11 @@ new class extends Component
     $place = config('dobih.countries')[$hill->country] ?? null;
     // The sub-section is one of the hill's areas, listed below; the section above it is worked out here.
     $murraySection = \App\Enums\HillGrouping::MurraySection->sectionFor($hill);
-    $mwis = $hill->mwisArea();
-
-    // The hill pages are public, so logging and ascents only appear for someone who can use them.
+    // The hill pages are public. Nothing from MWIS shows to someone who isn't signed in
+    // (spec §4), and logging and ascents only appear for someone who can use them.
     $viewer = auth()->user();
+    $mwis = $viewer !== null ? $hill->mwisArea() : null;
+    $forecastUrl = $viewer !== null ? $hill->mwis_forecast_url : null;
     $canLog = $viewer !== null && $viewer->hasVerifiedEmail();
     $ascents = $canLog
         ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay.walk.days.hills')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
@@ -76,7 +77,7 @@ new class extends Component
         </figure>
     @endif
 
-    @if ($hill->walkhighlands_url || $hill->mwis_forecast_url)
+    @if ($hill->walkhighlands_url || $forecastUrl)
         <div class="flex flex-wrap items-center gap-4">
             @if ($hill->walkhighlands_url)
                 <flux:link href="{{ $hill->walkhighlands_url }}" target="_blank" rel="noopener">
@@ -84,8 +85,8 @@ new class extends Component
                 </flux:link>
             @endif
 
-            @if ($hill->mwis_forecast_url)
-                <a href="{{ $hill->mwis_forecast_url }}" target="_blank" rel="noopener" class="inline-flex items-center">
+            @if ($forecastUrl)
+                <a href="{{ $forecastUrl }}" target="_blank" rel="noopener" class="inline-flex items-center">
                     <img src="{{ asset('images/mwis-logo.png') }}" alt="{{ __('MWIS mountain weather forecast') }}" class="h-8" />
                 </a>
             @endif

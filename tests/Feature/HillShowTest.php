@@ -6,6 +6,7 @@ use App\Models\Area;
 use App\Models\Hill;
 use App\Models\HillClass;
 use App\Models\OsMap;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +45,7 @@ class HillShowTest extends TestCase
             'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/west-highlands',
         ]);
 
-        $response = $this->get(route('hills.show', $hill));
+        $response = $this->actingAs(User::factory()->create())->get(route('hills.show', $hill));
 
         $response->assertSee('https://www.walkhighlands.co.uk/munros/ben-nevis', false);
         $response->assertSee('https://www.mwis.org.uk/forecasts/scottish/west-highlands', false);
@@ -62,7 +63,7 @@ class HillShowTest extends TestCase
             'drop_m' => 595,
         ]);
 
-        $this->get(route('hills.show', $hill))
+        $this->actingAs(User::factory()->create())->get(route('hills.show', $hill))
             ->assertOk()
             ->assertSee('Ben Cleuch')
             ->assertSee('Scotland')

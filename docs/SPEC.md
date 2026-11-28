@@ -1,6 +1,6 @@
 # Baggr: product spec
 
-_Draft v0.20, 26 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
+_Draft v0.21, 28 Nov 2026. This document covers the **what** and **why**. Claude Code checks each section against the codebase before it becomes an issue._
 
 ---
 
@@ -192,7 +192,7 @@ DoBIH gives every hill a Murray section and sub-section, so both work for every 
 - **Group by** MWIS area, Murray section or Murray sub-section, or not grouped (the default). The hills are shown in section order with a heading for each section, in the accent colour (hill green, heather in dark mode), and the hills under it are indented. The grouping chosen is the one My hills opens with.
 - **Columns:** name, height, MWIS area and list. There is no country or region column: the grouping and the area show where a hill is.
 - **List column:** the most significant of the nine lists the hill is on, in the order Munro, Munro Top, Corbett, Corbett Top, Graham, Graham Top, Donald, Donald Top, Marilyn (a Munro that is also a Marilyn shows "Munro"). It is blank for a hill on none of them. It shows the full name, or on a phone the short code (M, MT, Ma), and sorts by significance, Munros first.
-- **MWIS area on every hill**, in the list and on the hill's page, as a badge linking to that area's forecast.
+- **MWIS area on every hill**, in the list and on the hill's page, as a badge linking to that area's forecast, for signed-in people (§4).
 - **Search** matches the start of a word in a hill's name or other names, so "Dum" finds Dumyat. DoBIH area names and MWIS area names are matched too, but only from four letters, so a short term doesn't bring in every hill in a council area.
 - **Filters:** _Not done by me_, _Not done by anyone in [group]_ (for each group the person is in), _Done by me_, and height from and to. The done filters are for signed-in people; visitors don't see them.
 - **Weather on the list:** each hill shows its MWIS area's forecast for the target day (see §4).
@@ -260,6 +260,7 @@ Rain never changes the rating. The thresholds are stored in config so they can b
 
 ### Rules
 - Every weather display links to the full MWIS forecast for that area.
+- **Signed-in people only** (v0.21). The hill list and hill pages are public, but nothing from MWIS shows to a visitor who isn't signed in: no logo or forecast link, no MWIS area on a hill or in the list, no grouping by MWIS area, no search by an MWIS area's name, and later no weather.
 - **Open question:** MWIS forecasts are copyright. Before Baggr shows extracted values, ask MWIS whether that's OK. If they say no, Baggr falls back to showing only the area plus a link.
 
 ### Area view
@@ -310,7 +311,7 @@ The Laravel welcome page at `/` goes.
   - the brand tagline, **"Get yourselves together."**, with the supporting line **"The hills are calling."** beneath it in smaller, lighter text
   - a **Sign in** button
   - no **Register** link, because joining is by invitation (§2). Public registration is switched off in Fortify.
-- **Everything else needs signing in.** A visitor who follows a link to any page is sent to sign in, then taken to that page. **For now the hill list and hill pages stay public**, and move behind sign-in later.
+- **Everything else needs signing in.** A visitor who follows a link to any page is sent to sign in, then taken to that page. **For now the hill list and hill pages stay public**, without anything from MWIS (§4), and move behind sign-in later.
 - **Signed in:** `/` is the home dashboard, a phone-first view of "what's next":
   - **Next plan** (or "No plans yet, start one"), with its date, hills and the weather or outlook rating.
   - **This weekend:** the five Scottish MWIS areas for the target day with their ratings, each tapping through to the hills I still need there (the area view, §4).
@@ -575,6 +576,7 @@ Ruled out permanently.
 | Search | Word-start matching on names; area names (DoBIH and MWIS) from four letters (v0.16) |
 | Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
+| MWIS and visitors | The MWIS logo, links, areas and (later) weather show to signed-in people only (v0.21) |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
 | Check-ins for followers | In scope (Should): check-ins are the base and work for everyone; OwnTracks adds a moving dot and trail for walkers who install it. The share link is open to anyone who has it, needs no login, and **never expires**; any walker can turn it off and make a new one. Check-ins are kept for good; raw OwnTracks positions are deleted after 30 days. ntfy for followers. |
 | Weather beyond MWIS's 3 days | Open-Meteo outlook per hill, up to 14 days, clearly labelled |
