@@ -115,6 +115,20 @@ new #[Title('Hills')] class extends Component
         return Auth::user()?->hasVerifiedEmail() ?? false;
     }
 
+    /** Nothing from MWIS shows to someone who isn't signed in (spec §4). */
+    public function canSeeMwis(): bool
+    {
+        return Auth::check();
+    }
+
+    /** The grouping in use, which can't be MWIS area for someone who may not see MWIS. */
+    public function grouping(): ?HillGrouping
+    {
+        $grouping = HillGrouping::tryFrom($this->groupBy);
+
+        return $grouping === HillGrouping::Mwis && ! $this->canSeeMwis() ? null : $grouping;
+    }
+
     /**
      * @return Collection<int, Group>
      */
@@ -153,7 +167,7 @@ new #[Title('Hills')] class extends Component
     {
         $sortBy = in_array($this->sortBy, self::SORTABLE, true) ? $this->sortBy : 'name';
         $direction = $this->sortDirection === 'desc' ? 'desc' : 'asc';
-        $grouping = HillGrouping::tryFrom($this->groupBy);
+        $grouping = $this->grouping();
 
         return Hill::query()
             ->when($this->area !== '', fn ($query) => $query
@@ -178,8 +192,9 @@ new #[Title('Hills')] class extends Component
     /**
      * Matches the start of a word in a hill's name or other names, so "Dum" finds
      * Dumyat and not every hill with "dum" in the middle of a word. Area names
-     * (DoBIH's and MWIS's) are searched too, but only once there are four letters
-     * to go on: "Dum" would otherwise bring in every hill in Dumfries and Galloway.
+     * (DoBIH's, and MWIS's when signed in) are searched too, but only once there are
+     * four letters to go on: "Dum" would otherwise bring in every hill in Dumfries
+     * and Galloway.
      *
      * @param  Illuminate\Database\Eloquent\Builder<Hill>  $query
      */
@@ -196,7 +211,7 @@ new #[Title('Hills')] class extends Component
                 $match->orWhereHas('areas', fn ($areas) => $areas->where($wordStart('areas.name')));
 
                 $needle = mb_strtolower($term);
-                $mwis = collect(MwisAreas::all())
+                $mwis = collect($this->canSeeMwis() ? MwisAreas::all() : [])
                     ->filter(fn (array $area) => str_starts_with(mb_strtolower($area['name']), $needle) || str_contains(mb_strtolower($area['name']), " {$needle}"))
                     ->keys()
                     ->all();
@@ -267,6 +282,7 @@ new #[Title('Hills')] class extends Component
         <flux:select wire:model.live="groupBy" class="max-w-72" aria-label="{{ __('Group by') }}">
             <flux:select.option value="">{{ __('Not grouped') }}</flux:select.option>
             @foreach (\App\Enums\HillGrouping::cases() as $option)
+                @continue($option === \App\Enums\HillGrouping::Mwis && ! $this->canSeeMwis())
                 <flux:select.option value="{{ $option->value }}">{{ __('Group by :name', ['name' => $option->label()]) }}</flux:select.option>
             @endforeach
         </flux:select>
@@ -301,7 +317,9 @@ new #[Title('Hills')] class extends Component
             <flux:table.column sortable :sorted="$sortBy === 'height_m'" :direction="$sortDirection" wire:click="sort('height_m')" class="w-[20%] sm:w-auto">
                 {{ __('Height (m)') }}
             </flux:table.column>
-            <flux:table.column class="w-[20%] sm:w-auto">{{ __('MWIS') }}</flux:table.column>
+            @if ($this->canSeeMwis())
+                <flux:table.column class="w-[20%] sm:w-auto">{{ __('MWIS') }}</flux:table.column>
+            @endif
             <flux:table.column sortable :sorted="$sortBy === 'list'" :direction="$sortDirection" wire:click="sort('list')" class="w-[20%] sm:w-auto">
                 {{ __('List') }}
             </flux:table.column>
@@ -309,8 +327,9 @@ new #[Title('Hills')] class extends Component
 
         <flux:table.rows>
             @php
-                $grouping = \App\Enums\HillGrouping::tryFrom($groupBy);
+                $grouping = $this->grouping();
                 $currentSection = null;
+                $columns = $this->canSeeMwis() ? 4 : 3;
             @endphp
             @forelse ($this->hills as $hill)
                 @if ($grouping)
@@ -318,7 +337,7 @@ new #[Title('Hills')] class extends Component
                     @if ($section['key'] !== $currentSection)
                         @php($currentSection = $section['key'])
                         <flux:table.row :key="'section-'.$section['key'].'-'.$hill->id">
-                            <flux:table.cell colspan="4" class="!bg-hill/10 text-sm font-semibold !text-hill dark:!bg-heather/15 dark:!text-heather">{{ $section['label'] }}</flux:table.cell>
+                            <flux:table.cell :colspan="$columns" class="!bg-hill/10 text-sm font-semibold !text-hill dark:!bg-heather/15 dark:!text-heather">{{ $section['label'] }}</flux:table.cell>
                         </flux:table.row>
                     @endif
                 @endif
@@ -329,18 +348,20 @@ new #[Title('Hills')] class extends Component
                 >
                     <flux:table.cell class="!whitespace-normal font-medium {{ $grouping ? 'ps-8' : '' }}">{{ $hill->name }}</flux:table.cell>
                     <flux:table.cell>{{ $hill->height_m }}</flux:table.cell>
-                    <flux:table.cell>
-                        @if ($mwis = $hill->mwisArea())
-                            <a
-                                href="{{ $mwis['url'] }}"
-                                target="_blank"
-                                rel="noopener"
-                                x-on:click.stop
-                                title="{{ __('MWIS forecast: :area', ['area' => $mwis['name']]) }}"
-                                class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-                            >{{ $mwis['code'] }}</a>
-                        @endif
-                    </flux:table.cell>
+                    @if ($this->canSeeMwis())
+                        <flux:table.cell>
+                            @if ($mwis = $hill->mwisArea())
+                                <a
+                                    href="{{ $mwis['url'] }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    x-on:click.stop
+                                    title="{{ __('MWIS forecast: :area', ['area' => $mwis['name']]) }}"
+                                    class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+                                >{{ $mwis['code'] }}</a>
+                            @endif
+                        </flux:table.cell>
+                    @endif
                     <flux:table.cell>
                         @if ($main = $hill->mainList())
                             <span class="sm:hidden" title="{{ $main['name'] }}">{{ $main['code'] }}</span>
@@ -350,7 +371,7 @@ new #[Title('Hills')] class extends Component
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="4" class="text-center text-zinc-500">
+                    <flux:table.cell :colspan="$columns" class="text-center text-zinc-500">
                         {{ __('No hills match your search.') }}
                     </flux:table.cell>
                 </flux:table.row>

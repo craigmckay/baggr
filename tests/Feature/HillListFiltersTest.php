@@ -124,7 +124,7 @@ class HillListFiltersTest extends TestCase
         $this->hill('Ben Cleuch', ['mwis_area' => 'SH']);
         $this->hill('Irish Hill', []);
 
-        $this->get(route('hills.index'))
+        $this->actingAs(User::factory()->create())->get(route('hills.index'))
             ->assertSee('https://www.mwis.org.uk/forecasts/scottish/southeastern-highlands', false)
             ->assertSee('>SH<', false);
     }
@@ -135,7 +135,7 @@ class HillListFiltersTest extends TestCase
         $this->hill('Ben A North', ['mwis_area' => 'NW']);
         $this->hill('Ben Nowhere', ['mwis_area' => null]);
 
-        Livewire::test('pages::hills')
+        Livewire::actingAs(User::factory()->create())->test('pages::hills')
             ->set('groupBy', 'mwis')
             ->assertSeeInOrder(['Northwest Highlands', 'Ben A North', 'West Highlands', 'Ben Z West', 'No MWIS area', 'Ben Nowhere']);
     }
@@ -352,7 +352,7 @@ class HillListFiltersTest extends TestCase
         $this->hill('Ben Macdui', ['mwis_area' => 'EH']);
         $this->hill('Ben Cleuch', ['mwis_area' => 'SH']);
 
-        Livewire::test('pages::hills')
+        Livewire::actingAs(User::factory()->create())->test('pages::hills')
             ->set('search', 'Cairng')
             ->assertSee('Ben Macdui')
             ->assertDontSee('Ben Cleuch')
@@ -374,7 +374,7 @@ class HillListFiltersTest extends TestCase
     {
         $hill = $this->hill('Ben Cleuch', ['mwis_area' => 'SH', 'country' => 'S']);
 
-        $this->get(route('hills.show', $hill))
+        $this->actingAs(User::factory()->create())->get(route('hills.show', $hill))
             ->assertSee('Southeastern Highlands')
             ->assertSee('https://www.mwis.org.uk/forecasts/scottish/southeastern-highlands', false);
     }
@@ -383,6 +383,39 @@ class HillListFiltersTest extends TestCase
     {
         $hill = $this->hill('Irish Hill');
 
-        $this->get(route('hills.show', $hill))->assertDontSee('MWIS area');
+        $this->actingAs(User::factory()->create())->get(route('hills.show', $hill))->assertDontSee('MWIS area');
+    }
+
+    public function test_visitors_see_nothing_from_mwis_in_the_hill_list(): void
+    {
+        $this->hill('Ben Macdui', ['mwis_area' => 'EH']);
+
+        $this->get(route('hills.index', ['groupBy' => 'mwis']))
+            ->assertOk()
+            ->assertSee('Ben Macdui')
+            ->assertSee('Group by Murray section')
+            ->assertDontSee('Group by MWIS area')
+            ->assertDontSee('>MWIS', false)
+            ->assertDontSee('mwis.org.uk', false)
+            ->assertDontSee('Cairngorms NP and Monadhliath');
+
+        Livewire::test('pages::hills')
+            ->set('search', 'Cairng')
+            ->assertDontSee('Ben Macdui');
+    }
+
+    public function test_visitors_see_nothing_from_mwis_on_a_hill_page(): void
+    {
+        $hill = $this->hill('Ben Cleuch', [
+            'mwis_area' => 'SH',
+            'mwis_forecast_url' => 'https://www.mwis.org.uk/forecasts/scottish/southeastern-highlands',
+        ]);
+
+        $this->get(route('hills.show', $hill))
+            ->assertOk()
+            ->assertSee('Ben Cleuch')
+            ->assertDontSee('MWIS')
+            ->assertDontSee('mwis', false)
+            ->assertDontSee('Southeastern Highlands');
     }
 }
