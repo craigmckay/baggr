@@ -60,7 +60,7 @@ Baggr gets its own identity, replacing the Laravel defaults.
 | Logging: quick hill, round, trip | §5 | **Must** |
 | Editing a logged walk, with dragging to reorder its hills | §5, §8.1 | **Must** |
 | Hill list: grouping by MWIS area or Murray section, list column, MWIS badge, filters | §3 | **Must** |
-| MWIS fetch at 18:00, target day, rating | §4 | **Must** |
+| MWIS fetch at 07:00 and 18:00, target day, rating | §4 | **Must** |
 | Area view ("where's best this weekend?") | §4 | **Must** |
 | My completed hills: X / total and by-section breakdown | §6.1 | **Must** |
 | My hills to do: list with forecast | §6.2 | **Must** |
@@ -209,10 +209,10 @@ DoBIH gives every hill a Murray section and sub-section, so both work for every 
 Forecasts are **off by default** (`MWIS_FORECASTS`) and stay off on the live site until MWIS gives permission. While they are off, Baggr fetches nothing from MWIS and shows only areas and links to the forecasts. No text from MWIS is kept in the code repository: the tests use made-up forecasts.
 
 ### Fetching
-- **A daily job at 18:00** (v0.22) fetches the latest forecast for all ten areas and stores it in the database. That's 10 requests a day, and visitors never cause a request to MWIS. On the live site it runs through Laravel's scheduler, triggered by a cPanel cron job.
-- The 18:00 run picks up that afternoon's issue, so from the evening Baggr has **the next 3 days**, and today's forecast as fetched the evening before. A change MWIS makes the next morning isn't picked up until 18:00; the link to the full forecast has it.
+- **A job at 07:00 and 18:00** (v0.22) fetches the latest forecast for all ten areas and stores it in the database. That's 20 requests a day, ten each time, and visitors never cause a request to MWIS. On the live site it runs through Laravel's scheduler, triggered by a cPanel cron job.
+- The 18:00 run picks up that afternoon's issue, so from the evening Baggr has **the next 3 days**, and still holds today's. The 07:00 run picks up any change MWIS has made since, before people set off, and covers for a failed run the evening before. A later change isn't picked up until the next run; the link to the full forecast has it.
 - If a fetch fails or the page layout changes, Baggr keeps showing the last good forecast, marked with its issue date, and logs the error. It never shows a blank.
-- **Past forecasts are kept** (v0.22): one row for each area and date. A newer issue updates the row while MWIS still covers the date; after that it stays as it is and is never deleted. So the row kept is the last one fetched, normally the evening before. Earlier versions aren't kept.
+- **Past forecasts are kept** (v0.22): one row for each area and date. A newer issue updates the row while MWIS still covers the date; after that it stays as it is and is never deleted. So the row kept is the last one fetched, normally that morning's. Earlier versions aren't kept.
 - Baggr names itself to MWIS: `Mozilla/5.0 (compatible; Baggr/1.0; +https://baggr.co.uk)`.
 
 ### The target day
@@ -228,7 +228,7 @@ The **target day** is the **coming Saturday if it's covered, otherwise the furth
 | Sat | Sun, Mon, Tue | **Sat** (today's, still held) |
 | Sun | Mon, Tue, Wed | Wed |
 
-Before 18:00 each day shows what the previous evening's fetch gave.
+Before 18:00 each day shows the previous day's issue.
 
 **Plans** use their own dates. A multi-day plan shows each day's forecast as soon as that day is covered.
 
@@ -240,7 +240,7 @@ Plans and date polls often look further ahead than MWIS's 3 days. For those date
 - **What Baggr shows:** wind at summit height in mph, low-cloud cover as a percentage (a rough guide to whether the tops are clear), and precipitation.
 - **Rating:** the same Go / Marginal / Poor rules, using wind and treating "100 minus low-cloud %" as the cloud-free figure, for hills in Scotland only. It's always labelled **Outlook**, never just a rating, so it's clearly less certain. Hills outside Scotland show the outlook values with no rating.
 - **Hand-over:** once a date comes within MWIS's range, the MWIS forecast replaces the outlook.
-- **Fetching:** in the same daily job, only for hills on active plans and polls. That's a handful of requests a day.
+- **Fetching:** in the same job, only for hills on active plans and polls. That's a handful of requests a day.
 - **Attribution:** Open-Meteo's data is CC BY 4.0, so every outlook display credits Open-Meteo.
 
 ### What Baggr extracts for each area and day
@@ -445,7 +445,7 @@ After the last day, any attendee taps **Close plan** and gets a grid **for each 
 - The topic name must be unguessable (ntfy.sh topics are open to anyone who knows the name), or Baggr runs its own ntfy server with access control.
 - **Plan summary message:** dates and meeting point/time, who's coming, each day's hills, the MWIS headline with wind, rain and cloud-free percentage for each covered day, and a link to the plan.
 - **When to send:**
-  - automatically just after the 18:00 forecast fetch, on the first evening the walk's first day is covered (3 days before), and again on the evening before
+  - automatically just after the 07:00 forecast fetch, on the first morning the walk's first day is covered (2 days before), and again on the morning before
   - automatically when a date poll opens (asking people to vote), when a poll reaches its threshold, and when a date is confirmed or a plan is postponed or cancelled
   - by hand: any attendee can tap **Send update**
 - Sending runs from the Laravel scheduler.
@@ -587,7 +587,7 @@ Ruled out permanently.
 | Getting DoBIH onto the live site | Import locally, then send a database dump; the Access file never goes to the host |
 | Hill pages and sign-in | The hill list and hill pages stay public for now; the rest of the app goes behind sign-in |
 | MWIS before permission | Build step 4, switched off by default; local testing only until MWIS agrees (v0.22) |
-| Forecast fetch time | Once a day at 18:00, after the main afternoon issue (v0.22) |
+| Forecast fetch times | Twice a day: 07:00, and 18:00 after the main afternoon issue (v0.22) |
 | Past forecasts | Kept: the last version fetched for each area and date; earlier versions aren't kept (v0.22) |
 | MWIS and visitors | The MWIS logo, links, areas and (later) weather show to signed-in people only (v0.21) |
 | Prioritisation | MoSCoW, scoped to version 1, plus a **Never** tier for permanent exclusions (see Priorities at the top) |
@@ -599,7 +599,7 @@ Ruled out permanently.
 
 ## 15. Open questions
 
-1. **MWIS permission:** Craig sent MWIS a request through their contact form on 22 Nov 2026, covering the logo and linking, and a daily 07:00 read of the ten areas showing a few short extracts (headline, wind, how wet, cloud-free chance, freezing level), credited and linked. Waiting for a reply. Since then the read has moved to 18:00 and past forecasts are kept (v0.22): tell MWIS both when following up. If they say no, Baggr shows the area and a link only (§4). Step 4 was built ahead of the reply, with forecasts switched off (§4); permission is needed before they are switched on live.
+1. **MWIS permission:** Craig sent MWIS a request through their contact form on 22 Nov 2026, covering the logo and linking, and a daily 07:00 read of the ten areas showing a few short extracts (headline, wind, how wet, cloud-free chance, freezing level), credited and linked. Waiting for a reply. Since then it has become twice a day, at 07:00 and 18:00, and past forecasts are kept (v0.22): tell MWIS both when following up. If they say no, Baggr shows the area and a link only (§4). Step 4 was built ahead of the reply, with forecasts switched off (§4); permission is needed before they are switched on live.
 2. **Map provider:** Thunderforest Outdoors is preferred (§14) until we get a definitive reply. To do: Craig signs up for the free Thunderforest plan (checking that it asks for no payment card and telling Claude before accepting any terms that mention charges), OS support answered on 24 Nov 2026 (see §14: Premium needs a card, a key can be restricted to a domain, and Premium data can't be downloaded or extracted by end users), so nothing more is needed from OS unless the plan changes. Not needed before step 8 (GPX routes), the first map.
 _Resolved and moved to §14: Geograph hotlinking, ntfy topics, hill lists, live tracking source, brand colours (16 Nov 2026); DoBIH licence (17 Nov 2026); email service, now Resend and tested (21 Nov 2026)._
 
@@ -618,7 +618,7 @@ The Musts come first, then the Shoulds, then the Coulds.
 3a. **Admin alert for waiting Visitors** (§2): an email to the group's admins when someone arrives through the reusable link, and an "N waiting" badge on the Groups list. Small, and done before step 4 so it is in place as more people are brought in.
 3b. **Load the past ascents** (§5): the one-off `ascents:import` command, rehearsed on a copy of the live database, then run on the live site. Done before step 4 so the to-do list and the group's "who still needs it" are real.
 3c. **Edit a logged walk** (§5): the "Log a walk" form for an existing walk, and dragging to reorder hills (§8.1, asked for in step 1 but only the up and down buttons were built). Done before step 5, which reuses the form.
-4. **MWIS data** (§4): the 18:00 fetch, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
+4. **MWIS data** (§4): the 07:00 and 18:00 fetches, the target day, the rating, weather on hills and on the to-do list, the area view, the home dashboard.
 5. **Plans** (§8): draft plans, multi-day, attending, postpone, cancel, close into ascents.
 6. **Date polls** (§7): poll on a draft plan, vote, confirm the date.
 7. **Notifications** (§10). Includes the ntfy alert for Follower comments (§11).

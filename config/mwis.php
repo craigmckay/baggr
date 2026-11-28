@@ -25,14 +25,16 @@ return [
     | (spec §4). While it is off Baggr fetches nothing from MWIS and shows only
     | areas and links to the forecasts.
     |
-    | The daily fetch runs at "fetch_at" UK time, through Laravel's scheduler.
+    | Forecasts are fetched twice a day, at "fetch_hours" UK time, through
+    | Laravel's scheduler.
     |
     */
 
     'enabled' => (bool) env('MWIS_FORECASTS', false),
 
-    // After MWIS's main afternoon issue.
-    'fetch_at' => '18:00',
+    // 07:00 catches an overnight change before people set off; 18:00 is after
+    // MWIS's main afternoon issue.
+    'fetch_hours' => [7, 18],
 
     'timezone' => 'Europe/London',
 

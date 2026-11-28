@@ -186,13 +186,13 @@ class FetchForecastsTest extends TestCase
         Log::shouldHaveReceived('error')->twice();
     }
 
-    public function test_the_fetch_is_scheduled_for_six_in_the_evening_uk_time(): void
+    public function test_the_fetch_is_scheduled_for_seven_and_six_uk_time(): void
     {
         $event = collect(app(Schedule::class)->events())
             ->first(fn (Event $event) => str_contains((string) $event->command, 'mwis:fetch'));
 
         $this->assertNotNull($event);
-        $this->assertSame('0 18 * * *', $event->expression);
+        $this->assertSame('0 7,18 * * *', $event->expression);
         $this->assertSame('Europe/London', (string) $event->timezone);
         $this->assertFalse($event->filtersPass(app()));
 

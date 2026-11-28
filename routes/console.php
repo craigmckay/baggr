@@ -10,6 +10,6 @@ Artisan::command('inspire', function () {
 
 // Needs one cron entry running "schedule:run" every minute (deploy/README.md).
 Schedule::command('mwis:fetch')
-    ->dailyAt(config('mwis.fetch_at'))
+    ->twiceDaily(...config('mwis.fetch_hours'))
     ->timezone(config('mwis.timezone'))
     ->when(fn () => config('mwis.enabled'));
