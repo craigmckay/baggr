@@ -74,6 +74,7 @@ class MwisAreaMapperTest extends TestCase
         $cowal = $this->hillIn(['M19C' => 'murray_section']);
         $fell = $this->hillIn(['NE05' => 'named_area', 'M34A' => 'murray_section']);
         $fringe = $this->hillIn(['M34A' => 'murray_section']);
+        $sidlaw = $this->hillIn(['M26A' => 'murray_section', 'R20I' => 'rhb_section']);
 
         app(MwisAreaMapper::class)->run();
 
@@ -87,6 +88,7 @@ class MwisAreaMapperTest extends TestCase
         $this->assertFalse($nearest($arran));
         $this->assertFalse($nearest($cowal));
         $this->assertFalse($nearest($fell));
+        $this->assertFalse($nearest($sidlaw));
     }
 
     public function test_a_hill_with_its_own_forecast_link_is_never_labelled_nearest(): void

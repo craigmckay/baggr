@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // The latest forecast only: one row for each area and day it covers.
+        // One row for each area and day, kept after the day has passed.
         Schema::create('mwis_forecasts', function (Blueprint $table) {
             $table->id();
             $table->string('area', 4);

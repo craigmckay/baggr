@@ -37,12 +37,14 @@ class FetchMwisForecasts extends Command
                 $page = Http::withUserAgent(config('mwis.user_agent'))->timeout(30)->get($area['url'])->throw()->body();
                 $days = $parser->parse($page);
 
-                // Replaced only once the new forecast has been read, so a failure keeps the last good one.
+                // Saved only once the whole page has been read, so a failure keeps the last good
+                // forecast. Days no longer on the page are never touched: they are the history.
                 DB::transaction(function () use ($area, $days) {
-                    MwisForecast::query()->where('area', $area['code'])->delete();
-
                     foreach ($days as $day) {
-                        MwisForecast::create(['area' => $area['code']] + $day);
+                        $forecast = MwisForecast::query()->where('area', $area['code'])->whereDate('date', $day['date'])->first()
+                            ?? new MwisForecast(['area' => $area['code']]);
+
+                        $forecast->fill($day)->save();
                     }
                 });
 

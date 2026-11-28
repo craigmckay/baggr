@@ -81,6 +81,7 @@ class MwisAreaMapper
             ->whereIn('id', $hillsIn('murray_section', config('mwis.nearest_area_sections')))
             ->whereNotIn('id', $hillsIn('named_area', array_keys(config('mwis.named_areas'))))
             ->whereNotIn('id', $hillsIn('hill_range', config('mwis.claimed_hill_ranges')))
+            ->whereNotIn('id', $hillsIn('rhb_section', config('mwis.claimed_rhb_sections')))
             ->update(['mwis_nearest' => true]);
     }
 

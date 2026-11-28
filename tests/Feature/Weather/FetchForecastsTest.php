@@ -148,6 +148,25 @@ class FetchForecastsTest extends TestCase
         $this->assertSame(25, MwisForecast::query()->where('area', 'WH')->orderBy('date')->firstOrFail()->wind_mph);
     }
 
+    public function test_past_days_are_kept_and_coming_days_are_updated_in_place(): void
+    {
+        config(['mwis.enabled' => true]);
+        MwisForecast::create(['area' => 'WH', 'date' => '2026-11-27', 'wind' => 'Gone by']);
+        $coming = MwisForecast::create(['area' => 'WH', 'date' => '2026-11-28', 'headline' => 'Old headline', 'wind' => 'Old']);
+        Http::fake(['www.mwis.org.uk/*' => Http::response($this->threeDays())]);
+
+        $this->artisan('mwis:fetch')->assertSuccessful();
+        $this->artisan('mwis:fetch')->assertSuccessful();
+
+        $held = MwisForecast::query()->where('area', 'WH')->orderBy('date')->get();
+
+        $this->assertSame(['2026-11-27', '2026-11-28', '2026-11-29', '2026-11-30'], $held->map(fn (MwisForecast $f) => $f->date->toDateString())->all());
+        $this->assertSame('Gone by', $held[0]->wind);
+        $this->assertSame($coming->id, $held[1]->id);
+        $this->assertSame('Westerly, 15 to 25mph, may gust 40mph on tops.', $held[1]->wind);
+        $this->assertDatabaseCount('mwis_forecasts', 31);
+    }
+
     public function test_a_failed_area_keeps_its_last_forecast_and_the_others_are_updated(): void
     {
         config(['mwis.enabled' => true]);
@@ -167,13 +186,13 @@ class FetchForecastsTest extends TestCase
         Log::shouldHaveReceived('error')->twice();
     }
 
-    public function test_the_fetch_is_scheduled_for_seven_in_the_morning_uk_time(): void
+    public function test_the_fetch_is_scheduled_for_six_in_the_evening_uk_time(): void
     {
         $event = collect(app(Schedule::class)->events())
             ->first(fn (Event $event) => str_contains((string) $event->command, 'mwis:fetch'));
 
         $this->assertNotNull($event);
-        $this->assertSame('0 7 * * *', $event->expression);
+        $this->assertSame('0 18 * * *', $event->expression);
         $this->assertSame('Europe/London', (string) $event->timezone);
         $this->assertFalse($event->filtersPass(app()));
 

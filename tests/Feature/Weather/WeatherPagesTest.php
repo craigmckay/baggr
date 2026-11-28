@@ -88,6 +88,34 @@ class WeatherPagesTest extends TestCase
         $this->assertSame($expected, (new Forecasts)->forArea('WH')?->date->toDateString());
     }
 
+    public function test_saturday_is_still_shown_after_its_evening_fetch(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-28 19:00', 'Europe/London'));
+        $this->actingAs(User::factory()->create());
+
+        // Saturday's row is kept from before; the evening fetch brought Sunday to Tuesday.
+        foreach (['2026-11-27', '2026-11-28', '2026-11-29', '2026-11-30', '2026-12-01'] as $date) {
+            $this->forecast('WH', $date);
+        }
+
+        $this->assertSame('2026-11-28', (new Forecasts)->forArea('WH')?->date->toDateString());
+    }
+
+    public function test_history_is_not_shown_once_there_are_coming_days(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->forecast('WH', '2026-11-20', headline: 'Last week');
+        $this->forecast('WH', '2026-11-28', headline: 'This week');
+        $this->forecast('SH', '2026-11-19', headline: 'Older');
+        $this->forecast('SH', '2026-11-21', headline: 'Latest held');
+
+        $forecasts = new Forecasts;
+
+        $this->assertSame('This week', $forecasts->forArea('WH')?->headline);
+        // An area whose fetches have been failing still shows its latest day.
+        $this->assertSame('Latest held', $forecasts->forArea('SH')?->headline);
+    }
+
     public function test_an_old_forecast_is_still_shown_and_marked(): void
     {
         $this->actingAs(User::factory()->create());

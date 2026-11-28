@@ -4,6 +4,7 @@ namespace App\Support\Mwis;
 
 use App\Models\MwisForecast;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -86,8 +87,35 @@ class Forecasts
      */
     private function held(): Collection
     {
-        return $this->held ??= self::visible()
-            ? MwisForecast::query()->orderBy('date')->orderBy('id')->get()
-            : new Collection;
+        return $this->held ??= self::visible() ? $this->current() : new Collection;
+    }
+
+    /**
+     * Every area's days from today on, or its latest day if they have all passed.
+     * Older days are kept as history and not read here.
+     *
+     * @return Collection<int, MwisForecast>
+     */
+    private function current(): Collection
+    {
+        $latest = MwisForecast::query()->toBase()->selectRaw('area, max(date) as latest')->groupBy('area')->pluck('latest', 'area');
+
+        if ($latest->isEmpty()) {
+            return new Collection;
+        }
+
+        $today = $this->today()->toDateString();
+
+        return MwisForecast::query()
+            ->where(function (Builder $query) use ($latest, $today) {
+                foreach ($latest as $area => $date) {
+                    $query->orWhere(fn (Builder $one) => $one
+                        ->where('area', $area)
+                        ->whereDate('date', '>=', min($today, substr((string) $date, 0, 10))));
+                }
+            })
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get();
     }
 }

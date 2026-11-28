@@ -10,7 +10,8 @@ use Illuminate\Support\Carbon;
 
 /**
  * What Baggr keeps of one MWIS area's forecast for one day (spec §4): a few short
- * extracts. The full forecast is always linked to.
+ * extracts. The full forecast is always linked to. Newer issues update the row
+ * while MWIS still covers the day; after that it is kept as it stands.
  *
  * @property string $area
  * @property Carbon $date
