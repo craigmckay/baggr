@@ -95,7 +95,7 @@ class HillProgress
     private function loadHills(): Collection
     {
         return Hill::query()
-            ->select(['id', 'name', 'slug', 'height_m', 'mwis_forecast_url', 'mwis_area', 'dobih_section'])
+            ->select(['id', 'name', 'slug', 'height_m', 'mwis_forecast_url', 'mwis_area', 'mwis_nearest', 'dobih_section'])
             ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list))
             ->when($this->area !== '', fn ($query) => $query->whereHas('areas', fn ($areas) => $areas->where('areas.code', $this->area)))
             ->orderByDesc('height_m')

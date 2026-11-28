@@ -9,6 +9,7 @@ use App\Support\Mwis\UnreadableForecast;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
@@ -99,6 +100,24 @@ class FetchForecastsTest extends TestCase
         $this->assertSame($expected, WeatherRating::fromNumbers($wind, $cloudFree));
     }
 
+    /** @return array<string, array{string, list<int>}> */
+    public static function ranges(): array
+    {
+        return [
+            'a range' => ['40 to 55mph, occasionally 60mph', [40, 55]],
+            'between' => ['Between 10 and 20mph', [10, 20]],
+            'one speed' => ['10mph or less', [10]],
+            'none' => ['Light', []],
+        ];
+    }
+
+    /** @param  list<int>  $expected */
+    #[DataProvider('ranges')]
+    public function test_the_wind_range_is_taken_from_the_text(string $text, array $expected): void
+    {
+        $this->assertSame($expected, app(ForecastPageParser::class)->windSpeeds($text));
+    }
+
     public function test_a_page_laid_out_differently_cannot_be_read(): void
     {
         $this->expectException(UnreadableForecast::class);
@@ -124,6 +143,7 @@ class FetchForecastsTest extends TestCase
         $this->artisan('mwis:fetch')->assertSuccessful();
 
         Http::assertSentCount(10);
+        Http::assertSent(fn (Request $request) => $request->hasHeader('User-Agent', 'Mozilla/5.0 (compatible; Baggr/1.0; +https://baggr.co.uk)'));
         $this->assertDatabaseCount('mwis_forecasts', 30);
         $this->assertSame(25, MwisForecast::query()->where('area', 'WH')->orderBy('date')->firstOrFail()->wind_mph);
     }

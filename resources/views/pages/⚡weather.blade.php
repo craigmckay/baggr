@@ -91,7 +91,7 @@ new #[Title('Weather')] class extends Component
     <div class="space-y-1">
         <flux:heading size="xl">{{ __('Weather') }}</flux:heading>
         @if ($forecasts->day())
-            <flux:subheading data-test="forecast-day">{{ __('MWIS forecast for :day', ['day' => $forecasts->day()->format('l j F')]) }}</flux:subheading>
+            <x-forecast-day :forecasts="$forecasts" />
         @else
             <flux:subheading>{{ __('Each area links to its forecast on MWIS.') }}</flux:subheading>
         @endif
@@ -122,16 +122,13 @@ new #[Title('Weather')] class extends Component
                 @continue(! str_contains($area['url'], "/{$path}/"))
                 @php($forecast = $forecasts->forArea($code))
 
-                <article wire:key="area-{{ $code }}" class="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="area-{{ $code }}">
+                @php($other = $forecast !== null && $forecasts->isForAnotherDay($forecast))
+
+                <article wire:key="area-{{ $code }}" @class(['space-y-3 rounded-lg border p-3', 'border-zinc-200 dark:border-zinc-700' => ! $other, 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40' => $other]) data-test="area-{{ $code }}">
                     <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <flux:heading>
-                                <a href="{{ route('my-hills.todo', ['mwis' => $code, 'list' => $list]) }}" wire:navigate class="hover:underline">{{ $area['name'] }}</a>
-                            </flux:heading>
-                            @if ($forecast && ! $forecast->date->isSameDay($forecasts->day()))
-                                <flux:text>{{ $forecast->date->format('l j F') }}</flux:text>
-                            @endif
-                        </div>
+                        <flux:heading>
+                            <a href="{{ route('my-hills.todo', ['mwis' => $code, 'list' => $list]) }}" wire:navigate class="hover:underline">{{ $area['name'] }}</a>
+                        </flux:heading>
                         @if ($forecast)
                             <x-weather-rating :forecast="$forecast" />
                         @endif

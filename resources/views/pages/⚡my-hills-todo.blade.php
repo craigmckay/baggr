@@ -226,7 +226,7 @@ new #[Title('Hills still to do')] class extends Component
 
     @if ($this->forecasts->day())
         <div class="space-y-1">
-            <flux:text data-test="forecast-day">{{ __('MWIS forecast for :day', ['day' => $this->forecasts->day()->format('l j F')]) }}</flux:text>
+            <x-forecast-day :forecasts="$this->forecasts" />
             <x-mwis-credit />
         </div>
     @endif
@@ -245,6 +245,9 @@ new #[Title('Hills still to do')] class extends Component
                     <span class="truncate text-zinc-500">{{ $row['section'] }}</span>
                     <span class="ms-auto flex items-center gap-2">
                         @if ($forecast = $this->forecasts->forArea($row['hill']->mwisArea()['code'] ?? null))
+                            @if ($row['hill']->mwis_nearest)
+                                <span class="text-xs text-zinc-500">{{ __('nearest area') }}</span>
+                            @endif
                             <x-weather-rating :forecast="$forecast" />
                         @endif
                         <span class="text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>
@@ -276,6 +279,9 @@ new #[Title('Hills still to do')] class extends Component
                                 <a href="{{ route('hills.show', $row['hill']) }}" wire:navigate class="font-medium hover:underline">{{ $row['hill']->name }}</a>
                                 <span class="ms-auto flex items-center gap-2">
                                     @if ($forecast = $this->forecasts->forArea($row['hill']->mwisArea()['code'] ?? null))
+                                        @if ($row['hill']->mwis_nearest)
+                                            <span class="text-xs text-zinc-500">{{ __('nearest area') }}</span>
+                                        @endif
                                         <x-weather-rating :forecast="$forecast" />
                                     @endif
                                     <span class="text-zinc-500 tabular-nums">{{ $row['hill']->height_m }}m</span>

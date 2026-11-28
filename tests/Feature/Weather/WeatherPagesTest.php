@@ -212,6 +212,72 @@ class WeatherPagesTest extends TestCase
             ->assertSee(route('weather'), false);
     }
 
+    public function test_a_day_that_stands_in_for_saturday_is_amber_with_its_date(): void
+    {
+        // On a Tuesday the furthest day held is Thursday, so Saturday isn't covered.
+        $this->travelTo(CarbonImmutable::parse('2026-11-24 09:00', 'Europe/London'));
+        $hill = $this->munro('Ben Test', 'WH');
+
+        foreach (['2026-11-24', '2026-11-25', '2026-11-26'] as $date) {
+            $this->forecast('WH', $date);
+        }
+
+        $me = User::factory()->create();
+
+        foreach ([route('home'), route('weather'), route('hills.show', $hill)] as $url) {
+            $this->actingAs($me)->get($url)
+                ->assertSee('Forecast date: Thursday 26 November')
+                ->assertSee('bg-amber-50', false);
+        }
+
+        foreach ([route('hills.index'), route('my-hills.todo')] as $url) {
+            $this->actingAs($me)->get($url)
+                ->assertSee('MWIS forecast for Thursday 26 November')
+                ->assertSee('Not Saturday 28 November')
+                ->assertSee('bg-amber-50', false);
+        }
+    }
+
+    public function test_a_saturday_forecast_is_not_amber(): void
+    {
+        $hill = $this->munro('Ben Test', 'WH');
+        $this->forecast('WH', '2026-11-28');
+        $me = User::factory()->create();
+
+        foreach ([route('home'), route('weather'), route('hills.show', $hill), route('hills.index')] as $url) {
+            $this->actingAs($me)->get($url)
+                ->assertDontSee('Forecast date:')
+                ->assertDontSee('Not Saturday')
+                ->assertDontSee('bg-amber-50', false);
+        }
+    }
+
+    public function test_the_wind_range_is_picked_out_above_the_full_text(): void
+    {
+        $hill = $this->munro('Ben Test', 'WH');
+        MwisForecast::create(['area' => 'WH', 'date' => '2026-11-28', 'wind' => 'Made-up: westerly 40 to 55mph, gusts 70mph.', 'wind_mph' => 55, 'cloud_free_percent' => 80]);
+        $me = User::factory()->create();
+
+        $this->actingAs($me)->get(route('hills.show', $hill))
+            ->assertSeeInOrder(['40 to 55 mph', 'Made-up: westerly 40 to 55mph, gusts 70mph.']);
+
+        $this->actingAs($me)->get(route('weather'))->assertSee('Wind 40 to 55 mph');
+    }
+
+    public function test_a_hill_mwis_does_not_claim_is_labelled_the_nearest_area(): void
+    {
+        $lomond = $this->munro('West Lomond', 'SH', ['mwis_nearest' => true]);
+        $ochil = $this->munro('Ben Cleuch', 'SH');
+        $this->forecast('SH', '2026-11-28');
+        $me = User::factory()->create();
+
+        $this->actingAs($me)->get(route('hills.show', $lomond))->assertSee('nearest area');
+        $this->actingAs($me)->get(route('hills.show', $ochil))->assertDontSee('nearest area');
+
+        Livewire::actingAs($me)->test('pages::my-hills-todo')->assertSee('nearest area');
+        Livewire::actingAs($me)->test('pages::hills')->assertSeeHtml('>nearest</div>');
+    }
+
     public function test_the_weather_page_is_for_signed_in_people(): void
     {
         $this->get(route('weather'))->assertRedirect(route('login'));

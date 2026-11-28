@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
  * and someone is signed in (spec §4), so pages need no checks of their own.
  *
  * The target day is the coming Saturday if the forecast covers it, otherwise the
- * furthest-out day it covers. If every day held has passed, because fetches have
+ * furthest-out day it covers, which pages then show in amber with its date. If every day held has passed, because fetches have
  * been failing, the latest one is still shown, and marked as old.
  */
 class Forecasts
@@ -38,6 +38,20 @@ class Forecasts
         return $target === null ? null : CarbonImmutable::parse($target->date->toDateString());
     }
 
+    /** The Saturday being looked ahead to: today, if it is one. */
+    public function saturday(): CarbonImmutable
+    {
+        $today = $this->today();
+
+        return $today->isSaturday() ? $today : $today->next('Saturday');
+    }
+
+    /** The forecast shown stands in for a Saturday that isn't covered. */
+    public function isForAnotherDay(MwisForecast $forecast): bool
+    {
+        return $forecast->date->toDateString() !== $this->saturday()->toDateString();
+    }
+
     /** A day that has gone by: the forecast couldn't be refreshed. */
     public function isOld(MwisForecast $forecast): bool
     {
@@ -54,14 +68,13 @@ class Forecasts
      */
     private function target(Collection $forecasts): ?MwisForecast
     {
-        $today = $this->today();
         $coming = $forecasts->filter(fn (MwisForecast $forecast) => ! $this->isOld($forecast));
 
         if ($coming->isEmpty()) {
             return $forecasts->last();
         }
 
-        $saturday = ($today->isSaturday() ? $today : $today->next('Saturday'))->toDateString();
+        $saturday = $this->saturday()->toDateString();
 
         return $coming->first(fn (MwisForecast $forecast) => $forecast->date->toDateString() === $saturday) ?? $coming->last();
     }

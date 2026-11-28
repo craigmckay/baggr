@@ -153,7 +153,7 @@ The list of lists is confirmed: Marilyns are in (added in v0.9); Furths are not.
 - **How a hill's MWIS area is worked out** (built in step 3, `php artisan hills:map-mwis`, stored in `hills.mwis_area` and `areas.mwis_area`), in this order: the area MWIS already forecasts for it (the Munros); its DoBIH named area (the Lake District fells, the Welsh ranges, the Cheviots, the Peak District); its Murray section; or, for the six sections that straddle two MWIS areas, the area of the nearest Munro. The boundaries are close, not exact, because MWIS publishes no boundary lines. **Hills with no MWIS area** show no badge and no forecast: Ireland, the Isle of Man, Shetland, Orkney, the Western Isles, the north east of Scotland (Tomintoul to the Dee valley), and England outside the Lake District, the Dales and North Pennines, the Peak District and the Cheviots.
 - **Choosing a list:** every hill view, stats page and history has a list selector. Munros is the default, and the choice is remembered.
 - **Photos:** every hill gets a Geograph photo (CC BY-SA, credited), except hills that are only on one of the four Tops lists, which show none (a hill on a Tops list that is also on a main list, such as a Corbett that is a Munro Top, still gets one). They're fetched locally in batches at one request a second (about six hours in all, resumable) and reach the live site in the database dump.
-- **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**.
+- **Hills MWIS doesn't claim.** Where a hill's area is mapped to an MWIS area but MWIS doesn't say it covers that hill, for example West and East Lomond in Fife, Baggr shows that area's forecast labelled as the **nearest area**. Which hills those are follows MWIS's own area descriptions (read 28 Nov 2026, listed in `config/mwis.php`): the Central Belt hills other than the Ochils; Islay, Jura, Colonsay, Coll, Tiree, Canna, Rum and Eigg; Ayr to the Clyde; and English hills round, but outside, the named national parks and ranges.
 
 ### Glossary: one name, one thing
 These are the only names for these things, in the app, the spec and the code.
@@ -213,9 +213,10 @@ Forecasts are **off by default** (`MWIS_FORECASTS`) and stay off on the live sit
 - The 07:00 run picks up the previous afternoon's issue, so on any given morning Baggr has **today plus the next 2 days**.
 - If a fetch fails or the page layout changes, Baggr keeps showing the last good forecast, marked with its issue date, and logs the error. It never shows a blank.
 - Only the latest forecast is kept: each successful fetch replaces an area's days.
+- Baggr names itself to MWIS: `Mozilla/5.0 (compatible; Baggr/1.0; +https://baggr.co.uk)`.
 
 ### The target day
-The **target day** is the **coming Saturday if it's covered, otherwise the furthest-out day that is**. The day's name is always shown, so it's clear which day you're looking at.
+The **target day** is the **coming Saturday if it's covered, otherwise the furthest-out day that is**. The day's name is always shown, so it's clear which day you're looking at. When the day shown isn't the Saturday, the forecast has an **amber background** and a separate **Forecast date** field saying which day it is for (v0.22).
 
 | Day | Forecast days held | Target day |
 | --- | --- | --- |
@@ -245,6 +246,7 @@ Plans and date polls often look further ahead than MWIS's 3 days. For those date
 | --- | --- | --- |
 | Headline | Short text, on the **first day of each issue only** | The text, where there is one |
 | Wind ("How windy? On the Munros") | Text with mph ranges, e.g. "40 to 55mph, occasionally 60mph, gusts…" | **Top of the main range** (55 here) as a number, plus the full text. Gusts are shown but not used in the rating. |
+| Wind range | Taken from the same text | The main range ("40 to 55 mph"), shown on its own above the full text |
 | Rain ("How wet?") | Description only, with no mm or percentage | MWIS's own one-line summary. **Not used in the rating**, because it's too subjective to score. |
 | Chance of cloud-free Munros | Percentages, often varying across the area, e.g. "10% around Skye rising to 30% inland" | **Highest figure** (30 here) for the rating, plus the full range |
 | Freezing level | Metres or a range, or "above the summits" | The text (matters in winter) |

@@ -23,6 +23,7 @@ class Hill extends Model
         'walkhighlands_url',
         'mwis_forecast_url',
         'mwis_area',
+        'mwis_nearest',
         'grid_ref',
         'latitude',
         'longitude',
@@ -43,6 +44,7 @@ class Hill extends Model
             'col_height_m' => 'float',
             'revised_on' => 'date',
             'tump_only' => 'boolean',
+            'mwis_nearest' => 'boolean',
         ];
     }
 

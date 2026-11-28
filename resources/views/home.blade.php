@@ -15,9 +15,9 @@
     <div class="mx-auto w-full max-w-2xl space-y-8">
         <section class="space-y-3" data-test="home-weather">
             <div>
-                <flux:heading size="xl">{{ $day === null || $day->isSaturday() ? __('This weekend') : __('Weather') }}</flux:heading>
+                <flux:heading size="xl">{{ __('This weekend') }}</flux:heading>
                 @if ($day)
-                    <flux:subheading>{{ __('MWIS forecast for :day', ['day' => $day->format('l j F')]) }}</flux:subheading>
+                    <x-forecast-day :forecasts="$forecasts" />
                 @endif
             </div>
 
@@ -25,9 +25,10 @@
                 @foreach (\App\Support\MwisAreas::all() as $code => $area)
                     @continue(! str_contains($area['url'], '/scottish/'))
                     @php($forecast = $forecasts->forArea($code))
+                    @php($other = $forecast !== null && $forecasts->isForAnotherDay($forecast))
 
                     <li>
-                        <a href="{{ route('my-hills.todo', ['mwis' => $code]) }}" wire:navigate class="flex items-center justify-between gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/40">
+                        <a href="{{ route('my-hills.todo', ['mwis' => $code]) }}" wire:navigate @class(['flex items-center justify-between gap-3 p-3', 'hover:bg-zinc-50 dark:hover:bg-zinc-700/40' => ! $other, 'bg-amber-50 dark:bg-amber-950/40' => $other])>
                             <span class="min-w-0">
                                 <span class="block font-medium">{{ $area['name'] }}</span>
                                 @if ($forecast?->headline)
@@ -35,8 +36,8 @@
                                 @elseif ($forecast?->rain)
                                     <span class="block text-sm text-zinc-500">{{ $forecast->rain }}</span>
                                 @endif
-                                @if ($forecast && ! $forecast->date->isSameDay($day))
-                                    <span class="block text-xs text-zinc-500">{{ $forecast->date->format('l j F') }}</span>
+                                @if ($other)
+                                    <span class="block text-xs font-medium text-amber-700 dark:text-amber-300">{{ __('Forecast date: :day', ['day' => $forecast->date->format('l j F')]) }}</span>
                                 @endif
                             </span>
                             @if ($forecast)

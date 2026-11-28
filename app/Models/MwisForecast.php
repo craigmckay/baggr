@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WeatherRating;
+use App\Support\Mwis\ForecastPageParser;
 use App\Support\MwisAreas;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -45,6 +46,14 @@ class MwisForecast extends Model
             'wind_mph' => 'integer',
             'cloud_free_percent' => 'integer',
         ];
+    }
+
+    /** "40 to 55 mph" from the wind text, or one speed if that's all it gives. */
+    public function windRange(): ?string
+    {
+        $speeds = (new ForecastPageParser)->windSpeeds((string) $this->wind);
+
+        return $speeds === [] ? null : implode(' to ', array_unique($speeds)).' mph';
     }
 
     /** Only the Scottish areas are rated: the thresholds are tuned for Munros. */

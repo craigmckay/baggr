@@ -315,7 +315,7 @@ new #[Title('Hills')] class extends Component
 
     @if ($forecasts->day())
         <div class="space-y-1">
-            <flux:text data-test="forecast-day">{{ __('MWIS forecast for :day', ['day' => $forecasts->day()->format('l j F')]) }}</flux:text>
+            <x-forecast-day :forecasts="$forecasts" />
             <x-mwis-credit />
         </div>
     @endif
@@ -370,6 +370,10 @@ new #[Title('Hills')] class extends Component
                                     title="{{ __('MWIS forecast: :area', ['area' => $mwis['name']]) }}"
                                     class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
                                 >{{ $mwis['code'] }}</a>
+
+                                @if ($hill->mwis_nearest)
+                                    <div class="text-xs text-zinc-500" title="{{ __('Nearest area: MWIS doesn\'t say it covers this hill') }}">{{ __('nearest') }}</div>
+                                @endif
 
                                 @if ($forecast = $forecasts->forArea($mwis['code']))
                                     <div class="mt-1"><x-weather-rating :forecast="$forecast" /></div>

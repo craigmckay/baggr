@@ -65,17 +65,31 @@ class ForecastPageParser
         return $days;
     }
 
-    /**
-     * The top of the main wind range: 55 for "40 to 55mph, occasionally 60mph".
-     * Gusts mentioned afterwards are ignored. With no range, the first speed given.
-     */
+    /** The top of the main wind range: 55 for "40 to 55mph, occasionally 60mph". */
     public function windMph(string $wind): ?int
     {
-        if (preg_match('/(\d{1,3})\s*(?:mph)?\s*(?:to|or|-|–)\s*(\d{1,3})\s*\+?\s*mph/iu', $wind, $range)) {
-            return max((int) $range[1], (int) $range[2]);
+        $speeds = $this->windSpeeds($wind);
+
+        return $speeds === [] ? null : max($speeds);
+    }
+
+    /**
+     * The main wind range, low then high. Gusts mentioned elsewhere are ignored.
+     * With no range, the first speed given, and with no speed, nothing.
+     *
+     * @return list<int>
+     */
+    public function windSpeeds(string $wind): array
+    {
+        if (preg_match('/(\d{1,3})\s*(?:mph)?\s*(?:to|or|-|–)\s*(\d{1,3})\s*\+?\s*mph/iu', $wind, $range)
+            || preg_match('/between\s+(\d{1,3})\s*(?:mph)?\s+and\s+(\d{1,3})\s*mph/i', $wind, $range)) {
+            $speeds = [(int) $range[1], (int) $range[2]];
+            sort($speeds);
+
+            return $speeds;
         }
 
-        return preg_match('/(\d{1,3})\s*\+?\s*mph/i', $wind, $single) ? (int) $single[1] : null;
+        return preg_match('/(\d{1,3})\s*\+?\s*mph/i', $wind, $single) ? [(int) $single[1]] : [];
     }
 
     /** The best figure given: 30 for "10% around Skye rising to 30% inland". */

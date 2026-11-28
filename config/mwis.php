@@ -35,7 +35,8 @@ return [
 
     'timezone' => 'Europe/London',
 
-    'user_agent' => env('MWIS_USER_AGENT', 'Mozilla/5.0 (compatible; HillForecastReader/1.0)'),
+    // How Baggr names itself to MWIS, so they can tell who is reading.
+    'user_agent' => env('MWIS_USER_AGENT', 'Mozilla/5.0 (compatible; Baggr/1.0; +https://baggr.co.uk)'),
 
     /*
     | The rating (Scottish areas only). Rain never changes it. Poor if the best
@@ -138,5 +139,30 @@ return [
     */
 
     'nearest_munro_sections' => ['M02A', 'M02B', 'M04B', 'M05B', 'M06B', 'M07A'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hills MWIS doesn't claim
+    |--------------------------------------------------------------------------
+    |
+    | A hill can be given an MWIS area that MWIS's own description of the area
+    | doesn't take in, such as the Lomonds in Fife. Baggr labels that the
+    | "nearest area". A hill in one of these Murray sub-sections is labelled,
+    | unless it has its own MWIS link, is in one of the named areas above, or is
+    | in one of the hill ranges below.
+    |
+    */
+
+    'nearest_area_sections' => [
+        'M17D', 'M17F',                 // Canna, Rum and Eigg; Coll and Tiree
+        'M20A', 'M20B',                 // Jura and Colonsay; Islay
+        'M26A', 'M26B',                 // The Central Belt, other than the Ochils
+        'M27A',                         // Ayr to the River Clyde
+        'M34A', 'M34B', 'M34C',         // Round the Lake District
+        'M35A', 'M35B',                 // Round the Dales and North Pennines
+    ],
+
+    // Glen Artney, the Ochils and the Southern Uplands ranges, which MWIS's descriptions take in.
+    'claimed_hill_ranges' => ['D001', 'D002', 'D003', 'D004', 'D005', 'D006', 'D007', 'D008', 'D009', 'D010', 'D011', 'D012'],
 
 ];
