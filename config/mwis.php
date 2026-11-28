@@ -16,6 +16,40 @@ return [
 
     'base_url' => 'https://www.mwis.org.uk/forecasts',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Forecasts
+    |--------------------------------------------------------------------------
+    |
+    | Off until MWIS gives permission to show extracts from their forecasts
+    | (spec §4). While it is off Baggr fetches nothing from MWIS and shows only
+    | areas and links to the forecasts.
+    |
+    | The daily fetch runs at "fetch_at" UK time, through Laravel's scheduler.
+    |
+    */
+
+    'enabled' => (bool) env('MWIS_FORECASTS', false),
+
+    'fetch_at' => '07:00',
+
+    'timezone' => 'Europe/London',
+
+    'user_agent' => env('MWIS_USER_AGENT', 'Mozilla/5.0 (compatible; HillForecastReader/1.0)'),
+
+    /*
+    | The rating (Scottish areas only). Rain never changes it. Poor if the best
+    | chance of cloud-free summits is under "poor_below_cloud_free" per cent or
+    | the wind is over "poor_above_wind" mph; Marginal from "marginal_from_wind"
+    | mph; otherwise Go.
+    */
+
+    'rating' => [
+        'poor_below_cloud_free' => 40,
+        'poor_above_wind' => 40,
+        'marginal_from_wind' => 30,
+    ],
+
     'areas' => [
         'the-northwest-highlands' => ['code' => 'NW', 'name' => 'Northwest Highlands', 'path' => 'scottish'],
         'west-highlands' => ['code' => 'WH', 'name' => 'West Highlands', 'path' => 'scottish'],

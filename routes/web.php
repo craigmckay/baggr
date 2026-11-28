@@ -4,8 +4,13 @@ use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupJoinController;
 use Illuminate\Support\Facades\Route;
 
-// Until the signed-in dashboard exists, signed-in visitors land on the hill list.
-Route::get('/', fn () => auth()->check() ? redirect()->route('hills.index') : view('welcome'))->name('home');
+// Signed out, a plain landing page; signed in, the dashboard. Someone who hasn't
+// verified their email can only use the hill list.
+Route::get('/', fn () => match (true) {
+    ! auth()->check() => view('welcome'),
+    ! auth()->user()->hasVerifiedEmail() => redirect()->route('hills.index'),
+    default => view('home'),
+})->name('home');
 
 Route::redirect('dashboard', '/')->name('dashboard');
 
@@ -34,6 +39,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('walks/log', 'pages::walk-log')->name('walks.log');
     Route::livewire('walks/{walk}', 'pages::walk-show')->name('walks.show');
     Route::livewire('walks/{walk}/edit', 'pages::walk-log')->name('walks.edit');
+
+    Route::livewire('weather', 'pages::weather')->name('weather');
 
     Route::livewire('my-hills', 'pages::my-hills')->name('my-hills.index');
     Route::livewire('my-hills/to-do', 'pages::my-hills-todo')->name('my-hills.todo');

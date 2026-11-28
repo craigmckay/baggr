@@ -34,6 +34,8 @@ new class extends Component
     $viewer = auth()->user();
     $mwis = $viewer !== null ? $hill->mwisArea() : null;
     $forecastUrl = $viewer !== null ? $hill->mwis_forecast_url : null;
+    $forecasts = new \App\Support\Mwis\Forecasts;
+    $forecast = $mwis !== null ? $forecasts->forArea($mwis['code']) : null;
     $canLog = $viewer !== null && $viewer->hasVerifiedEmail();
     $ascents = $canLog
         ? $viewer->ascents()->where('hill_id', $hill->id)->with('walkDay.walk.days.hills')->get()->sortBy(fn ($ascent) => $ascent->walkDay->date)->values()
@@ -90,6 +92,20 @@ new class extends Component
                     <img src="{{ asset('images/mwis-logo.png') }}" alt="{{ __('MWIS mountain weather forecast') }}" class="h-8" />
                 </a>
             @endif
+        </div>
+    @endif
+
+    @if ($forecast)
+        <div class="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" data-test="hill-forecast">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <flux:heading>{{ $forecast->date->format('l j F') }}</flux:heading>
+                    <flux:text>{{ $mwis['name'] }}</flux:text>
+                </div>
+                <x-weather-rating :forecast="$forecast" />
+            </div>
+
+            <x-forecast-details :forecast="$forecast" :forecasts="$forecasts" :url="$mwis['url']" />
         </div>
     @endif
 

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  * the group's colour for a walk with a group. The scope narrows which ascents
  * are looked at: "all", "solo" (walks with no group) or a group's id. An area
  * (a DoBIH area code, such as D002 for the Ochil Hills) narrows the list to the
- * hills in it, and so narrows the totals too.
+ * hills in it, and so narrows the totals too, as does an MWIS area code (WH).
  */
 class HillProgress
 {
@@ -33,6 +33,8 @@ class HillProgress
 
     private string $area;
 
+    private string $mwisArea;
+
     /** @var Collection<int, Hill>|null */
     private ?Collection $hills = null;
 
@@ -42,8 +44,10 @@ class HillProgress
     /** @var array<int, string>|null The same for every hill, whatever the list */
     private ?array $everything = null;
 
-    public function __construct(private readonly User $user, string $list, string $scope = self::ALL, string $area = '')
+    public function __construct(private readonly User $user, string $list, string $scope = self::ALL, string $area = '', string $mwisArea = '')
     {
+        $this->mwisArea = MwisAreas::find($mwisArea) === null ? '' : $mwisArea;
+
         // An area that isn't one is ignored, as a made-up list is.
         $this->area = $area !== '' && Area::query()->where('code', $area)->exists() ? $area : '';
 
@@ -72,6 +76,11 @@ class HillProgress
         return $this->area;
     }
 
+    public function mwisArea(): string
+    {
+        return $this->mwisArea;
+    }
+
     /**
      * Every hill on the list, tallest first.
      *
@@ -79,13 +88,22 @@ class HillProgress
      */
     public function hills(): Collection
     {
-        return $this->hills ??= Hill::query()
+        return $this->hills ??= $this->loadHills();
+    }
+
+    /** @return Collection<int, Hill> */
+    private function loadHills(): Collection
+    {
+        return Hill::query()
             ->select(['id', 'name', 'slug', 'height_m', 'mwis_forecast_url', 'mwis_area', 'dobih_section'])
             ->whereHas('classes', fn ($classes) => $classes->where('hill_classes.code', $this->list))
             ->when($this->area !== '', fn ($query) => $query->whereHas('areas', fn ($areas) => $areas->where('areas.code', $this->area)))
             ->orderByDesc('height_m')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->when($this->mwisArea !== '', fn (Collection $hills) => $hills
+                ->filter(fn (Hill $hill) => ($hill->mwisArea()['code'] ?? null) === $this->mwisArea)
+                ->values());
     }
 
     public function total(): int
